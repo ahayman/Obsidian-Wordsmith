@@ -1,0 +1,19 @@
+# Dependencies
+node_modules
+
+# Build output (main.js is committed for distribution)
+
+# Coverage
+coverage
+
+# IDE
+.idea
+.vscode
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local

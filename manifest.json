@@ -1,0 +1,10 @@
+{
+  "id": "synofinder",
+  "name": "SynoFinder",
+  "version": "0.1.0",
+  "minAppVersion": "1.0.0",
+  "description": "Find synonyms and definitions of words directly within Obsidian",
+  "author": "Aaron Hayman",
+  "authorUrl": "https://github.com/aaronhayman",
+  "isDesktopOnly": false
+}
