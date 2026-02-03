@@ -14,6 +14,7 @@ import { MobyService } from "./MobyService";
 import { DatamuseService } from "./DatamuseService";
 import { SynonymService } from "./SynonymService";
 import { createAPIService } from "./api";
+import { CacheService } from "./CacheService";
 
 export class DataService {
   private app: App;
@@ -22,6 +23,7 @@ export class DataService {
   moby: MobyService;
   datamuse: DatamuseService;
   private apiServices: Map<string, SynonymService> = new Map();
+  cacheService: CacheService;
 
   constructor(app: App, pluginDir: string, settings: SynoFinderSettings) {
     this.app = app;
@@ -29,6 +31,7 @@ export class DataService {
     this.wordNet = new WordNetService(app, pluginDir);
     this.moby = new MobyService(app, pluginDir);
     this.datamuse = new DatamuseService(settings.maxResults);
+    this.cacheService = new CacheService(settings.lookupCache, settings.maxCacheSize);
     this.initializeAPIServices();
   }
 
@@ -49,6 +52,7 @@ export class DataService {
   updateSettings(settings: SynoFinderSettings): void {
     this.settings = settings;
     this.datamuse.setMaxResults(settings.maxResults);
+    this.cacheService.setMaxSize(settings.maxCacheSize);
     this.initializeAPIServices();
   }
 
@@ -76,6 +80,10 @@ export class DataService {
   }
 
   async lookup(word: string): Promise<GroupedLookupResult> {
+    // Check cache first
+    const cached = this.cacheService.get(word);
+    if (cached) return cached;
+
     const result: GroupedLookupResult = {
       originalWord: word,
       results: {},
@@ -111,6 +119,9 @@ export class DataService {
     }
 
     await Promise.all(lookupPromises);
+
+    // Cache result before returning
+    this.cacheService.set(word, result);
 
     return result;
   }

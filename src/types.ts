@@ -75,11 +75,25 @@ export type SourceConfig =
   | { kind: "builtin"; id: BuiltinTabId; enabled: boolean }
   | { kind: "api"; id: string; config: APIServiceConfig };
 
+// Cache types
+export interface CacheEntry {
+  word: string;                    // Normalized to lowercase
+  result: GroupedLookupResult;     // Full lookup result
+  lastAccessed: number;            // Unix timestamp for LRU
+}
+
+export interface LookupCache {
+  entries: Record<string, CacheEntry>;
+  version: number;
+}
+
 export interface SynoFinderSettings {
   maxResults: number;
   sources: SourceConfig[];
   wordNetDownloaded: boolean;
   mobyDownloaded: boolean;
+  maxCacheSize: number;
+  lookupCache: LookupCache;
 }
 
 export const DEFAULT_SETTINGS: SynoFinderSettings = {
@@ -90,6 +104,11 @@ export const DEFAULT_SETTINGS: SynoFinderSettings = {
   ],
   wordNetDownloaded: false,
   mobyDownloaded: false,
+  maxCacheSize: 100,
+  lookupCache: {
+    entries: {},
+    version: 1,
+  },
 };
 
 // Helper functions for working with SourceConfig

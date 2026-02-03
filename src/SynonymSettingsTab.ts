@@ -66,10 +66,49 @@ export class SynonymSettingsTab extends PluginSettingTab {
       }).open();
     });
 
+    new Setting(containerEl).setName("Cache").setHeading();
+
+    this.addCacheSettings(containerEl);
+
     new Setting(containerEl).setName("Local data management").setHeading();
 
     this.addWordNetSetting(containerEl);
     this.addMobySetting(containerEl);
+  }
+
+  private addCacheSettings(containerEl: HTMLElement): void {
+    const cacheService = this.plugin.dataService?.cacheService;
+    const currentSize = cacheService?.size ?? 0;
+
+    new Setting(containerEl)
+      .setName("Cache size")
+      .setDesc("Maximum number of words to cache (0 to disable caching)")
+      .addSlider((slider) =>
+        slider
+          .setLimits(0, 1000, 50)
+          .setValue(this.plugin.settings.maxCacheSize)
+          .setDynamicTooltip()
+          .onChange(async (value) => {
+            this.plugin.settings.maxCacheSize = value;
+            await this.plugin.saveSettings();
+            this.display();
+          })
+      );
+
+    const clearSetting = new Setting(containerEl)
+      .setName("Clear cache")
+      .setDesc(`Currently caching ${currentSize} word${currentSize === 1 ? "" : "s"}`);
+
+    clearSetting.addButton((button) => {
+      button
+        .setButtonText("Clear")
+        .setDisabled(currentSize === 0)
+        .onClick(async () => {
+          cacheService?.clear();
+          await this.plugin.saveSettings();
+          this.display();
+        });
+    });
   }
 
   private renderSourcesList(containerEl: HTMLElement): void {

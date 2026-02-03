@@ -74,7 +74,8 @@ export class AltervistaService implements SynonymService {
     return dedupedResults.slice(0, maxResults);
   }
 
-  private parseCategory(category: string): string | undefined {
+  private parseCategory(category: string | undefined): string | undefined {
+    if (!category) return undefined;
     const categoryLower = category.toLowerCase();
     if (categoryLower.includes("noun")) return "noun";
     if (categoryLower.includes("verb")) return "verb";

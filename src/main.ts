@@ -1,5 +1,5 @@
 import { Editor, MarkdownFileInfo, MarkdownView, Notice, Plugin } from "obsidian";
-import { SynoFinderSettings, DEFAULT_SETTINGS, SourceConfig } from "./types";
+import { SynoFinderSettings, DEFAULT_SETTINGS, SourceConfig, LookupCache } from "./types";
 import { DataService } from "./services/DataService";
 import { SynonymModal } from "./SynonymModal";
 import { SynonymSettingsTab } from "./SynonymSettingsTab";
@@ -37,7 +37,28 @@ function migrateSettings(old: OldSettings): SynoFinderSettings {
     })),
     wordNetDownloaded: old.wordNetDownloaded,
     mobyDownloaded: old.mobyDownloaded,
+    maxCacheSize: DEFAULT_SETTINGS.maxCacheSize,
+    lookupCache: { entries: {}, version: 1 },
   };
+}
+
+function needsCacheMigration(data: unknown): boolean {
+  if (!data || typeof data !== "object") return false;
+  const obj = data as Record<string, unknown>;
+  // Check if it has the new format but missing cache fields
+  return obj.sources !== undefined &&
+         Array.isArray(obj.sources) &&
+         obj.sources.length > 0 &&
+         "kind" in (obj.sources[0] as Record<string, unknown>) &&
+         (obj.maxCacheSize === undefined || obj.lookupCache === undefined);
+}
+
+function addCacheFields(data: Record<string, unknown>): SynoFinderSettings {
+  return {
+    ...data,
+    maxCacheSize: data.maxCacheSize ?? DEFAULT_SETTINGS.maxCacheSize,
+    lookupCache: (data.lookupCache as LookupCache) ?? { entries: {}, version: 1 },
+  } as SynoFinderSettings;
 }
 
 export default class SynoFinderPlugin extends Plugin {
@@ -78,6 +99,10 @@ export default class SynoFinderPlugin extends Plugin {
       this.settings = migrateSettings(loadedData);
       // Save migrated settings
       await this.saveData(this.settings);
+    } else if (needsCacheMigration(loadedData)) {
+      // Migrate settings that have new source format but no cache fields
+      this.settings = addCacheFields(loadedData as Record<string, unknown>);
+      await this.saveData(this.settings);
     } else if (loadedData && typeof loadedData === "object") {
       this.settings = Object.assign(
         {},
@@ -90,6 +115,10 @@ export default class SynoFinderPlugin extends Plugin {
   }
 
   async saveSettings(): Promise<void> {
+    // Persist cache data from CacheService to settings before saving
+    if (this.dataService?.cacheService) {
+      this.settings.lookupCache = this.dataService.cacheService.toCache();
+    }
     await this.saveData(this.settings);
     this.dataService?.updateSettings(this.settings);
   }

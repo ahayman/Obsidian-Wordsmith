@@ -23,6 +23,14 @@ export default tseslint.config(
       },
     },
   },
+  {
+    files: ["**/*.test.ts"],
+    languageOptions: {
+      globals: {
+        ...globals.jest,
+      },
+    },
+  },
   ...obsidianmd.configs.recommended,
   globalIgnores([
     "node_modules",
