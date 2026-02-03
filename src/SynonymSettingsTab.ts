@@ -10,6 +10,7 @@ import {
 } from "./types";
 import { AddAPIServiceModal } from "./AddAPIServiceModal";
 import { getAPIServiceInfo } from "./services/SynonymService";
+import { createServiceIcon } from "./utils/serviceIcons";
 
 export class SynonymSettingsTab extends PluginSettingTab {
   plugin: SynoFinderPlugin;
@@ -134,11 +135,20 @@ export class SynonymSettingsTab extends PluginSettingTab {
       const handleEl = itemEl.createDiv({ cls: "synofinder-drag-handle" });
       setIcon(handleEl, "grip-vertical");
 
+      // Service icon
+      const iconContainer = itemEl.createDiv({ cls: "synofinder-source-icon" });
+      if (isBuiltinSource(source)) {
+        createServiceIcon(iconContainer, source.id, 24);
+      } else if (isAPISource(source)) {
+        createServiceIcon(iconContainer, source.config.type, 24);
+      }
+
       // Content
       const contentEl = itemEl.createDiv({ cls: "synofinder-source-content" });
 
       if (isBuiltinSource(source)) {
-        const nameEl = contentEl.createDiv({ cls: "synofinder-source-name" });
+        const nameRow = contentEl.createDiv({ cls: "synofinder-source-name-row" });
+        const nameEl = nameRow.createSpan({ cls: "synofinder-source-name" });
         nameEl.setText(TAB_LABELS[source.id]);
         const descEl = contentEl.createDiv({ cls: "synofinder-source-description" });
         descEl.setText(TAB_DESCRIPTIONS[source.id]);

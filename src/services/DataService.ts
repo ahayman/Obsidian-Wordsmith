@@ -221,7 +221,7 @@ export class DataService {
 
     // Add spelling tab only if nspell is loaded and word is misspelled
     if (this.nspell.isLoaded() && !this.nspell.isCorrect(word)) {
-      tabs.push({ id: "spelling", label: "Spelling" });
+      tabs.push({ id: "spelling", label: "Spelling", iconId: "spelling" });
     }
 
     // Add tabs based on enabled sources
@@ -232,12 +232,14 @@ export class DataService {
         tabs.push({
           id: source.id,
           label: TAB_LABELS[source.id],
+          iconId: source.id,
         });
       } else if (isAPISource(source)) {
         const serviceInfo = getAPIServiceInfo(source.config.type);
         tabs.push({
           id: source.id,
           label: serviceInfo.name,
+          iconId: source.config.type, // Use service type for icon lookup
         });
       }
     }

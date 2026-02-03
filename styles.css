@@ -33,16 +33,39 @@
   padding: 0 0 8px 0;
   border-bottom: 1px solid var(--background-modifier-border);
   margin-bottom: 8px;
+  overflow: hidden;
 }
 
 .synofinder-tab {
-  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  padding: 6px 10px;
   border-radius: 4px;
-  font-size: 0.9em;
+  font-size: 0.85em;
   cursor: pointer;
   color: var(--text-muted);
   background-color: transparent;
   transition: all 0.15s ease;
+}
+
+/* Mobile: smaller tabs */
+@media (max-width: 480px) {
+  .synofinder-tab {
+    padding: 5px 8px;
+    gap: 3px;
+  }
+
+  .synofinder-tab .synofinder-service-icon {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  .synofinder-tab-count {
+    font-size: 0.75em;
+  }
 }
 
 .synofinder-tab:hover {
@@ -60,6 +83,13 @@
   color: var(--text-on-accent);
 }
 
+/* Tab count (shown after icon) */
+.synofinder-tab-count {
+  font-size: 0.8em;
+  color: inherit;
+  white-space: nowrap;
+}
+
 /* Grayed Tab State */
 .synofinder-tab-grayed {
   opacity: 0.4;
@@ -69,7 +99,8 @@
 
 /* Loading Tab State */
 .synofinder-tab-loading .synofinder-tab-spinner {
-  margin-left: 4px;
+  flex-shrink: 0;
+  font-size: 0.85em;
 }
 
 /* Results Container */
@@ -285,6 +316,41 @@
 
 .synofinder-drag-handle:hover {
   color: var(--text-muted);
+}
+
+.synofinder-source-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Service icon sizing */
+.synofinder-service-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.synofinder-service-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.synofinder-icon-sm {
+  width: 16px;
+  height: 16px;
+}
+
+.synofinder-icon-md {
+  width: 18px;
+  height: 18px;
+}
+
+.synofinder-icon-lg {
+  width: 24px;
+  height: 24px;
 }
 
 .synofinder-source-content {

@@ -153,6 +153,7 @@ export type TabState = "loading" | "results" | "grayed";
 export interface TabMetadata {
   id: string;
   label: string;
+  iconId: string; // Service type for icon lookup (e.g., "local", "merriam-webster")
 }
 
 // Callback interface for streaming results

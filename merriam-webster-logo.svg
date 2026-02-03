@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240">
+  <!-- White circle -->
+  <circle cx="120" cy="120" r="110" fill="#FFFFFF"/>
+  
+  <!-- Red ring -->
+  <circle cx="120" cy="120" r="102" fill="none" stroke="#C41230" stroke-width="6"/>
+  
+  <!-- Text: Merriam- -->
+  <text x="120" y="115" 
+        font-family="Georgia, 'Times New Roman', serif" 
+        font-size="38" 
+        font-weight="400"
+        fill="#003A70" 
+        text-anchor="middle">Merriam-</text>
+  
+  <!-- Text: Webster -->
+  <text x="120" y="155" 
+        font-family="Georgia, 'Times New Roman', serif" 
+        font-size="38" 
+        font-weight="400"
+        fill="#003A70" 
+        text-anchor="middle">Webster</text>
+  
+  <!-- Registered trademark symbol -->
+  <text x="225" y="175" 
+        font-family="Arial, sans-serif" 
+        font-size="12" 
+        fill="#000000">®</text>
+</svg>

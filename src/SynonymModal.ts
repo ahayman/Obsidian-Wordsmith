@@ -7,6 +7,7 @@ import {
 } from "./types";
 import SynoFinderPlugin from "./main";
 import { replaceWord } from "./utils/wordExtractor";
+import { createServiceIcon } from "./utils/serviceIcons";
 
 export class SynonymModal extends Modal {
   private plugin: SynoFinderPlugin;
@@ -212,18 +213,25 @@ export class SynonymModal extends Modal {
         cls: classes.join(" "),
       });
 
-      // Tab label
-      const labelSpan = tabEl.createSpan({ text: tab.label });
+      // Service icon
+      createServiceIcon(tabEl, tab.iconId, 16);
 
       // Show count for results, spinner for loading
       if (state === "results") {
         const count = this.getResultsForTab(tab.id).length;
-        labelSpan.setText(`${tab.label} (${count})`);
+        tabEl.createSpan({
+          text: `(${count})`,
+          cls: "synofinder-tab-count",
+        });
+        tabEl.setAttribute("title", `${tab.label} (${count})`);
       } else if (state === "loading") {
         tabEl.createSpan({
           cls: "synofinder-tab-spinner synofinder-spinner",
-          text: " ⟳",
+          text: "⟳",
         });
+        tabEl.setAttribute("title", tab.label);
+      } else {
+        tabEl.setAttribute("title", tab.label);
       }
 
       // Click handler (only for non-grayed tabs)
