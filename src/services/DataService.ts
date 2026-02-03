@@ -97,10 +97,6 @@ export class DataService {
   }
 
   async lookup(word: string): Promise<GroupedLookupResult> {
-    // Check cache first
-    const cached = this.cacheService.get(word);
-    if (cached) return cached;
-
     const result: GroupedLookupResult = {
       originalWord: word,
       results: {},
@@ -112,42 +108,64 @@ export class DataService {
     for (const source of enabledSources) {
       if (isBuiltinSource(source)) {
         if (source.id === "local") {
-          // Synchronous local lookup
-          const localResults = this.lookupLocal(word);
-          result.results["local"] = localResults;
+          // Check cache first
+          const cached = this.cacheService.getService(word, "local");
+          if (cached) {
+            result.results["local"] = cached;
+          } else {
+            const localResults = this.lookupLocal(word);
+            result.results["local"] = localResults;
+            this.cacheService.setService(word, "local", localResults);
+          }
         } else if (source.id === "datamuse") {
-          // Async datamuse lookup
-          lookupPromises.push(
-            this.lookupDatamuse(word).then((results) => {
-              result.results["datamuse"] = results;
-            })
-          );
+          const cached = this.cacheService.getService(word, "datamuse");
+          if (cached) {
+            result.results["datamuse"] = cached;
+          } else {
+            lookupPromises.push(
+              this.lookupDatamuse(word).then((results) => {
+                result.results["datamuse"] = results;
+                this.cacheService.setService(word, "datamuse", results);
+              })
+            );
+          }
         }
       } else if (isAPISource(source)) {
-        const service = this.apiServices.get(source.id);
-        if (service) {
-          lookupPromises.push(
-            this.lookupAPIService(service, word).then((results) => {
-              result.results[source.id] = results;
-            })
-          );
+        const cached = this.cacheService.getService(word, source.id);
+        if (cached) {
+          result.results[source.id] = cached;
+        } else {
+          const service = this.apiServices.get(source.id);
+          if (service) {
+            lookupPromises.push(
+              this.lookupAPIService(service, word).then((results) => {
+                result.results[source.id] = results;
+                this.cacheService.setService(word, source.id, results);
+              })
+            );
+          }
         }
       }
     }
 
     // Add spelling suggestions lookup
-    lookupPromises.push(
-      this.spellingService.getSuggestions(word).then((spellingResults) => {
-        if (spellingResults.length > 0) {
-          result.results["spelling"] = spellingResults;
-        }
-      })
-    );
+    const cachedSpelling = this.cacheService.getService(word, "spelling");
+    if (cachedSpelling) {
+      if (cachedSpelling.length > 0) {
+        result.results["spelling"] = cachedSpelling;
+      }
+    } else {
+      lookupPromises.push(
+        this.spellingService.getSuggestions(word).then((spellingResults) => {
+          this.cacheService.setService(word, "spelling", spellingResults);
+          if (spellingResults.length > 0) {
+            result.results["spelling"] = spellingResults;
+          }
+        })
+      );
+    }
 
     await Promise.all(lookupPromises);
-
-    // Cache result before returning
-    this.cacheService.set(word, result);
 
     return result;
   }
@@ -213,6 +231,62 @@ export class DataService {
   }
 
   /**
+   * Returns top 5 replacement suggestions for Quick Replace command.
+   * If word is misspelled, returns spelling corrections.
+   * Otherwise, returns synonyms from the first enabled source.
+   * Uses per-service caching.
+   */
+  async getQuickReplaceSuggestions(word: string): Promise<SynonymResult[]> {
+    // Check spelling first - if misspelled, return spelling corrections
+    if (this.nspell.isLoaded() && !this.nspell.isCorrect(word)) {
+      // Check cache for spelling
+      const cached = this.cacheService.getService(word, "spelling");
+      if (cached) {
+        return cached.slice(0, 5);
+      }
+      const suggestions = await this.spellingService.getSuggestions(word);
+      this.cacheService.setService(word, "spelling", suggestions);
+      return suggestions.slice(0, 5);
+    }
+
+    // Get synonyms from first enabled source
+    const enabledSources = this.getEnabledSources();
+    for (const source of enabledSources) {
+      if (isBuiltinSource(source)) {
+        if (source.id === "local") {
+          const cached = this.cacheService.getService(word, "local");
+          if (cached) {
+            return cached.slice(0, 5);
+          }
+          const results = this.lookupLocal(word);
+          this.cacheService.setService(word, "local", results);
+          return results.slice(0, 5);
+        } else if (source.id === "datamuse") {
+          const cached = this.cacheService.getService(word, "datamuse");
+          if (cached) {
+            return cached.slice(0, 5);
+          }
+          const results = await this.lookupDatamuse(word);
+          this.cacheService.setService(word, "datamuse", results);
+          return results.slice(0, 5);
+        }
+      } else if (isAPISource(source)) {
+        const cached = this.cacheService.getService(word, source.id);
+        if (cached) {
+          return cached.slice(0, 5);
+        }
+        const service = this.apiServices.get(source.id);
+        if (service) {
+          const results = await this.lookupAPIService(service, word);
+          this.cacheService.setService(word, source.id, results);
+          return results.slice(0, 5);
+        }
+      }
+    }
+    return [];
+  }
+
+  /**
    * Returns metadata for all enabled tabs (known before any lookup).
    * Includes spelling tab only if the word is misspelled (checked locally via nspell).
    */
@@ -249,6 +323,7 @@ export class DataService {
 
   /**
    * Performs a streaming lookup, calling callbacks as each source completes.
+   * Uses per-service caching - cached services stream immediately, uncached are fetched.
    * Returns a handle with a cancel() function to stop callbacks if modal closes early.
    */
   lookupStreaming(word: string, callbacks: StreamingLookupCallbacks): StreamingLookupHandle {
@@ -260,75 +335,74 @@ export class DataService {
       },
     };
 
-    // Check cache first
-    const cached = this.cacheService.get(word);
-    if (cached) {
-      // Return all cached results immediately
-      for (const [sourceId, results] of Object.entries(cached.results)) {
-        if (!cancelled) {
-          callbacks.onSourceComplete(sourceId, results);
-        }
-      }
-      if (!cancelled) {
-        callbacks.onAllComplete();
-      }
-      return handle;
-    }
-
-    // Track results for caching
-    const resultMap: Record<string, SynonymResult[]> = {};
     const enabledSources = this.getEnabledSources();
     let pendingCount = 0;
 
-    const onSourceDone = (sourceId: string, results: SynonymResult[]) => {
+    const onSourceDone = (sourceId: string, results: SynonymResult[], fromCache: boolean) => {
       if (cancelled) return;
-      resultMap[sourceId] = results;
+      // Cache if not already cached
+      if (!fromCache) {
+        this.cacheService.setService(word, sourceId, results);
+      }
       callbacks.onSourceComplete(sourceId, results);
       pendingCount--;
-      if (pendingCount === 0) {
-        // All sources complete - cache and notify
-        const groupedResult: GroupedLookupResult = {
-          originalWord: word,
-          results: resultMap,
-        };
-        this.cacheService.set(word, groupedResult);
-        if (!cancelled) {
-          callbacks.onAllComplete();
-        }
+      if (pendingCount === 0 && !cancelled) {
+        callbacks.onAllComplete();
       }
     };
 
-    // Process each enabled source
+    // Process each enabled source - check cache first
     for (const source of enabledSources) {
       if (isBuiltinSource(source)) {
         if (source.id === "local") {
-          // Synchronous local lookup - complete immediately
           pendingCount++;
-          const localResults = this.lookupLocal(word);
-          onSourceDone("local", localResults);
+          const cached = this.cacheService.getService(word, "local");
+          if (cached) {
+            onSourceDone("local", cached, true);
+          } else {
+            const localResults = this.lookupLocal(word);
+            onSourceDone("local", localResults, false);
+          }
         } else if (source.id === "datamuse") {
-          // Async datamuse lookup
           pendingCount++;
-          void this.lookupDatamuse(word).then((results) => {
-            onSourceDone("datamuse", results);
-          });
+          const cached = this.cacheService.getService(word, "datamuse");
+          if (cached) {
+            onSourceDone("datamuse", cached, true);
+          } else {
+            void this.lookupDatamuse(word).then((results) => {
+              onSourceDone("datamuse", results, false);
+            });
+          }
         }
       } else if (isAPISource(source)) {
-        const service = this.apiServices.get(source.id);
-        if (service) {
-          pendingCount++;
-          void this.lookupAPIService(service, word).then((results) => {
-            onSourceDone(source.id, results);
-          });
+        pendingCount++;
+        const cached = this.cacheService.getService(word, source.id);
+        if (cached) {
+          onSourceDone(source.id, cached, true);
+        } else {
+          const service = this.apiServices.get(source.id);
+          if (service) {
+            void this.lookupAPIService(service, word).then((results) => {
+              onSourceDone(source.id, results, false);
+            });
+          } else {
+            // No service available, decrement pending count
+            pendingCount--;
+          }
         }
       }
     }
 
     // Add spelling suggestions lookup
     pendingCount++;
-    void this.spellingService.getSuggestions(word).then((spellingResults) => {
-      onSourceDone("spelling", spellingResults);
-    });
+    const cachedSpelling = this.cacheService.getService(word, "spelling");
+    if (cachedSpelling) {
+      onSourceDone("spelling", cachedSpelling, true);
+    } else {
+      void this.spellingService.getSuggestions(word).then((spellingResults) => {
+        onSourceDone("spelling", spellingResults, false);
+      });
+    }
 
     // Edge case: if no sources were enabled, complete immediately
     if (pendingCount === 0) {

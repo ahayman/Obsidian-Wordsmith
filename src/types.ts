@@ -75,11 +75,11 @@ export type SourceConfig =
   | { kind: "builtin"; id: BuiltinTabId; enabled: boolean }
   | { kind: "api"; id: string; config: APIServiceConfig };
 
-// Cache types
+// Cache types - per-service caching
 export interface CacheEntry {
-  word: string;                    // Normalized to lowercase
-  result: GroupedLookupResult;     // Full lookup result
-  lastAccessed: number;            // Unix timestamp for LRU
+  word: string;                              // Normalized to lowercase
+  services: Record<string, SynonymResult[]>; // Per-service results
+  lastAccessed: number;                      // Unix timestamp for LRU
 }
 
 export interface LookupCache {

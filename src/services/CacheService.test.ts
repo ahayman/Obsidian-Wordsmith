@@ -1,54 +1,156 @@
 import { CacheService } from "./CacheService";
-import { GroupedLookupResult, LookupCache } from "../types";
+import { LookupCache, SynonymResult } from "../types";
 
-function createMockResult(word: string): GroupedLookupResult {
-  return {
-    originalWord: word,
-    results: {
-      local: [{ word: `${word}-synonym`, type: "synonym", source: "wordnet" }],
-    },
-  };
+function createMockResults(word: string): SynonymResult[] {
+  return [{ word: `${word}-synonym`, type: "synonym", source: "wordnet" }];
 }
 
 function createEmptyCache(): LookupCache {
-  return { entries: {}, version: 1 };
+  return { entries: {}, version: 2 };
 }
 
 describe("CacheService", () => {
-  describe("get and set", () => {
+  describe("getService and setService", () => {
     it("should return null for uncached words", () => {
       const cache = new CacheService(createEmptyCache(), 100);
-      expect(cache.get("hello")).toBeNull();
+      expect(cache.getService("hello", "local")).toBeNull();
     });
 
-    it("should return cached results", () => {
+    it("should return null for uncached services", () => {
       const cache = new CacheService(createEmptyCache(), 100);
-      const result = createMockResult("hello");
+      cache.setService("hello", "local", createMockResults("hello"));
+      expect(cache.getService("hello", "datamuse")).toBeNull();
+    });
 
-      cache.set("hello", result);
-      expect(cache.get("hello")).toEqual(result);
+    it("should return cached results for a service", () => {
+      const cache = new CacheService(createEmptyCache(), 100);
+      const results = createMockResults("hello");
+
+      cache.setService("hello", "local", results);
+      expect(cache.getService("hello", "local")).toEqual(results);
     });
 
     it("should normalize keys to lowercase and trimmed", () => {
       const cache = new CacheService(createEmptyCache(), 100);
-      const result = createMockResult("hello");
+      const results = createMockResults("hello");
 
-      cache.set("  HELLO  ", result);
-      expect(cache.get("hello")).toEqual(result);
-      expect(cache.get("HELLO")).toEqual(result);
-      expect(cache.get("  hello  ")).toEqual(result);
+      cache.setService("  HELLO  ", "local", results);
+      expect(cache.getService("hello", "local")).toEqual(results);
+      expect(cache.getService("HELLO", "local")).toEqual(results);
+      expect(cache.getService("  hello  ", "local")).toEqual(results);
     });
 
-    it("should update existing entries", () => {
+    it("should store multiple services for same word", () => {
       const cache = new CacheService(createEmptyCache(), 100);
-      const result1 = createMockResult("hello");
-      const result2 = createMockResult("hello-updated");
+      const localResults = createMockResults("hello-local");
+      const datamuseResults = createMockResults("hello-datamuse");
 
-      cache.set("hello", result1);
-      cache.set("hello", result2);
+      cache.setService("hello", "local", localResults);
+      cache.setService("hello", "datamuse", datamuseResults);
 
-      expect(cache.get("hello")).toEqual(result2);
-      expect(cache.size).toBe(1);
+      expect(cache.getService("hello", "local")).toEqual(localResults);
+      expect(cache.getService("hello", "datamuse")).toEqual(datamuseResults);
+      expect(cache.size).toBe(1); // Single word entry
+    });
+
+    it("should update existing service results", () => {
+      const cache = new CacheService(createEmptyCache(), 100);
+      const results1 = createMockResults("hello1");
+      const results2 = createMockResults("hello2");
+
+      cache.setService("hello", "local", results1);
+      cache.setService("hello", "local", results2);
+
+      expect(cache.getService("hello", "local")).toEqual(results2);
+    });
+  });
+
+  describe("hasService", () => {
+    it("should return false for uncached words", () => {
+      const cache = new CacheService(createEmptyCache(), 100);
+      expect(cache.hasService("hello", "local")).toBe(false);
+    });
+
+    it("should return true for cached services", () => {
+      const cache = new CacheService(createEmptyCache(), 100);
+      cache.setService("hello", "local", createMockResults("hello"));
+      expect(cache.hasService("hello", "local")).toBe(true);
+      expect(cache.hasService("hello", "datamuse")).toBe(false);
+    });
+  });
+
+  describe("getMissingServices", () => {
+    it("should return all services for uncached word", () => {
+      const cache = new CacheService(createEmptyCache(), 100);
+      const missing = cache.getMissingServices("hello", ["local", "datamuse", "spelling"]);
+      expect(missing).toEqual(["local", "datamuse", "spelling"]);
+    });
+
+    it("should return only uncached services", () => {
+      const cache = new CacheService(createEmptyCache(), 100);
+      cache.setService("hello", "local", createMockResults("hello"));
+      cache.setService("hello", "spelling", []);
+
+      const missing = cache.getMissingServices("hello", ["local", "datamuse", "spelling"]);
+      expect(missing).toEqual(["datamuse"]);
+    });
+
+    it("should return empty array when all services cached", () => {
+      const cache = new CacheService(createEmptyCache(), 100);
+      cache.setService("hello", "local", createMockResults("hello"));
+      cache.setService("hello", "datamuse", createMockResults("hello"));
+
+      const missing = cache.getMissingServices("hello", ["local", "datamuse"]);
+      expect(missing).toEqual([]);
+    });
+  });
+
+  describe("getAllServices", () => {
+    it("should return null for uncached word", () => {
+      const cache = new CacheService(createEmptyCache(), 100);
+      expect(cache.getAllServices("hello")).toBeNull();
+    });
+
+    it("should return all cached services for a word", () => {
+      const cache = new CacheService(createEmptyCache(), 100);
+      const localResults = createMockResults("local");
+      const datamuseResults = createMockResults("datamuse");
+
+      cache.setService("hello", "local", localResults);
+      cache.setService("hello", "datamuse", datamuseResults);
+
+      const all = cache.getAllServices("hello");
+      expect(all).toEqual({
+        local: localResults,
+        datamuse: datamuseResults,
+      });
+    });
+  });
+
+  describe("setMultipleServices", () => {
+    it("should cache multiple services at once", () => {
+      const cache = new CacheService(createEmptyCache(), 100);
+      const results = {
+        local: createMockResults("local"),
+        datamuse: createMockResults("datamuse"),
+      };
+
+      cache.setMultipleServices("hello", results);
+
+      expect(cache.getService("hello", "local")).toEqual(results.local);
+      expect(cache.getService("hello", "datamuse")).toEqual(results.datamuse);
+    });
+
+    it("should merge with existing services", () => {
+      const cache = new CacheService(createEmptyCache(), 100);
+      cache.setService("hello", "spelling", []);
+
+      cache.setMultipleServices("hello", {
+        local: createMockResults("local"),
+      });
+
+      expect(cache.getService("hello", "spelling")).toEqual([]);
+      expect(cache.getService("hello", "local")).not.toBeNull();
     });
   });
 
@@ -56,42 +158,42 @@ describe("CacheService", () => {
     it("should evict oldest entry when at capacity", () => {
       const cache = new CacheService(createEmptyCache(), 3);
 
-      cache.set("first", createMockResult("first"));
-      cache.set("second", createMockResult("second"));
-      cache.set("third", createMockResult("third"));
+      cache.setService("first", "local", createMockResults("first"));
+      cache.setService("second", "local", createMockResults("second"));
+      cache.setService("third", "local", createMockResults("third"));
 
       expect(cache.size).toBe(3);
 
       // Add fourth entry, should evict "first"
-      cache.set("fourth", createMockResult("fourth"));
+      cache.setService("fourth", "local", createMockResults("fourth"));
 
       expect(cache.size).toBe(3);
-      expect(cache.get("first")).toBeNull();
-      expect(cache.get("second")).not.toBeNull();
-      expect(cache.get("third")).not.toBeNull();
-      expect(cache.get("fourth")).not.toBeNull();
+      expect(cache.getService("first", "local")).toBeNull();
+      expect(cache.getService("second", "local")).not.toBeNull();
+      expect(cache.getService("third", "local")).not.toBeNull();
+      expect(cache.getService("fourth", "local")).not.toBeNull();
     });
 
     it("should update lastAccessed on get", async () => {
       const cache = new CacheService(createEmptyCache(), 3);
 
-      cache.set("first", createMockResult("first"));
+      cache.setService("first", "local", createMockResults("first"));
       await new Promise((r) => setTimeout(r, 10));
-      cache.set("second", createMockResult("second"));
+      cache.setService("second", "local", createMockResults("second"));
       await new Promise((r) => setTimeout(r, 10));
-      cache.set("third", createMockResult("third"));
+      cache.setService("third", "local", createMockResults("third"));
 
       // Access "first" to make it most recently used
       await new Promise((r) => setTimeout(r, 10));
-      cache.get("first");
+      cache.getService("first", "local");
 
       // Add fourth, should evict "second" (now oldest accessed)
-      cache.set("fourth", createMockResult("fourth"));
+      cache.setService("fourth", "local", createMockResults("fourth"));
 
-      expect(cache.get("first")).not.toBeNull();
-      expect(cache.get("second")).toBeNull();
-      expect(cache.get("third")).not.toBeNull();
-      expect(cache.get("fourth")).not.toBeNull();
+      expect(cache.getService("first", "local")).not.toBeNull();
+      expect(cache.getService("second", "local")).toBeNull();
+      expect(cache.getService("third", "local")).not.toBeNull();
+      expect(cache.getService("fourth", "local")).not.toBeNull();
     });
   });
 
@@ -99,26 +201,9 @@ describe("CacheService", () => {
     it("should not cache when maxSize is 0", () => {
       const cache = new CacheService(createEmptyCache(), 0);
 
-      cache.set("hello", createMockResult("hello"));
-      expect(cache.get("hello")).toBeNull();
+      cache.setService("hello", "local", createMockResults("hello"));
+      expect(cache.getService("hello", "local")).toBeNull();
       expect(cache.size).toBe(0);
-    });
-
-    it("should return null on get when maxSize is 0", () => {
-      const existingCache: LookupCache = {
-        entries: {
-          hello: {
-            word: "hello",
-            result: createMockResult("hello"),
-            lastAccessed: Date.now(),
-          },
-        },
-        version: 1,
-      };
-      const cache = new CacheService(existingCache, 0);
-
-      // Should return null even though data exists internally
-      expect(cache.get("hello")).toBeNull();
     });
   });
 
@@ -126,11 +211,11 @@ describe("CacheService", () => {
     it("should evict entries when size is reduced", () => {
       const cache = new CacheService(createEmptyCache(), 5);
 
-      cache.set("one", createMockResult("one"));
-      cache.set("two", createMockResult("two"));
-      cache.set("three", createMockResult("three"));
-      cache.set("four", createMockResult("four"));
-      cache.set("five", createMockResult("five"));
+      cache.setService("one", "local", createMockResults("one"));
+      cache.setService("two", "local", createMockResults("two"));
+      cache.setService("three", "local", createMockResults("three"));
+      cache.setService("four", "local", createMockResults("four"));
+      cache.setService("five", "local", createMockResults("five"));
 
       expect(cache.size).toBe(5);
 
@@ -138,15 +223,15 @@ describe("CacheService", () => {
 
       expect(cache.size).toBe(2);
       // The most recently added should remain
-      expect(cache.get("five")).not.toBeNull();
-      expect(cache.get("four")).not.toBeNull();
+      expect(cache.getService("five", "local")).not.toBeNull();
+      expect(cache.getService("four", "local")).not.toBeNull();
     });
 
     it("should clear cache when set to 0", () => {
       const cache = new CacheService(createEmptyCache(), 5);
 
-      cache.set("hello", createMockResult("hello"));
-      cache.set("world", createMockResult("world"));
+      cache.setService("hello", "local", createMockResults("hello"));
+      cache.setService("world", "local", createMockResults("world"));
 
       cache.setMaxSize(0);
 
@@ -158,32 +243,32 @@ describe("CacheService", () => {
     it("should remove all entries", () => {
       const cache = new CacheService(createEmptyCache(), 100);
 
-      cache.set("one", createMockResult("one"));
-      cache.set("two", createMockResult("two"));
-      cache.set("three", createMockResult("three"));
+      cache.setService("one", "local", createMockResults("one"));
+      cache.setService("two", "local", createMockResults("two"));
+      cache.setService("three", "local", createMockResults("three"));
 
       expect(cache.size).toBe(3);
 
       cache.clear();
 
       expect(cache.size).toBe(0);
-      expect(cache.get("one")).toBeNull();
+      expect(cache.getService("one", "local")).toBeNull();
     });
   });
 
   describe("toCache", () => {
     it("should serialize entries for persistence", () => {
       const cache = new CacheService(createEmptyCache(), 100);
-      const result = createMockResult("hello");
+      const results = createMockResults("hello");
 
-      cache.set("hello", result);
+      cache.setService("hello", "local", results);
 
       const serialized = cache.toCache();
 
-      expect(serialized.version).toBe(1);
+      expect(serialized.version).toBe(2);
       expect(serialized.entries["hello"]).toBeDefined();
       expect(serialized.entries["hello"]!.word).toBe("hello");
-      expect(serialized.entries["hello"]!.result).toEqual(result);
+      expect(serialized.entries["hello"]!.services["local"]).toEqual(results);
     });
   });
 
@@ -193,37 +278,35 @@ describe("CacheService", () => {
         entries: {
           hello: {
             word: "hello",
-            result: createMockResult("hello"),
+            services: { local: createMockResults("hello") },
             lastAccessed: Date.now(),
           },
           world: {
             word: "world",
-            result: createMockResult("world"),
+            services: { local: createMockResults("world"), datamuse: createMockResults("world") },
             lastAccessed: Date.now(),
           },
         },
-        version: 1,
+        version: 2,
       };
 
       const cache = new CacheService(existingCache, 100);
 
       expect(cache.size).toBe(2);
-      expect(cache.get("hello")).not.toBeNull();
-      expect(cache.get("world")).not.toBeNull();
+      expect(cache.getService("hello", "local")).not.toBeNull();
+      expect(cache.getService("world", "local")).not.toBeNull();
+      expect(cache.getService("world", "datamuse")).not.toBeNull();
     });
   });
 
   describe("caching empty results", () => {
-    it("should cache results with no synonyms", () => {
+    it("should cache empty results for a service", () => {
       const cache = new CacheService(createEmptyCache(), 100);
-      const emptyResult: GroupedLookupResult = {
-        originalWord: "asdfghjkl",
-        results: {},
-      };
 
-      cache.set("asdfghjkl", emptyResult);
+      cache.setService("asdfghjkl", "local", []);
 
-      expect(cache.get("asdfghjkl")).toEqual(emptyResult);
+      expect(cache.getService("asdfghjkl", "local")).toEqual([]);
+      expect(cache.hasService("asdfghjkl", "local")).toBe(true);
     });
   });
 });

@@ -4,6 +4,7 @@ import { DataService } from "./services/DataService";
 import { SynonymModal } from "./SynonymModal";
 import { SynonymSettingsTab } from "./SynonymSettingsTab";
 import { getWordUnderCursor } from "./utils/wordExtractor";
+import { QuickReplaceSuggest } from "./QuickReplaceSuggest";
 
 // Old settings format for migration
 interface OldSourceConfig {
@@ -102,6 +103,17 @@ export default class SynoFinderPlugin extends Plugin {
       name: "Find synonyms for word under cursor",
       editorCallback: (editor: Editor, _ctx: MarkdownView | MarkdownFileInfo) => {
         void this.findSynonyms(editor);
+      },
+    });
+
+    // Register Quick Replace command
+    const quickReplaceSuggest = new QuickReplaceSuggest(this.app, this.dataService);
+
+    this.addCommand({
+      id: "quick-replace",
+      name: "Quick replace - show replacement options",
+      editorCallback: (editor: Editor) => {
+        void quickReplaceSuggest.triggerForWord(editor);
       },
     });
 

@@ -667,3 +667,46 @@ body.is-mobile .synofinder-suggestion {
 body.is-mobile .synofinder-tab {
   padding: 8px 12px;
 }
+
+/* Quick Replace Popover Styles */
+.synofinder-quick-container {
+  position: fixed;
+  left: var(--quick-left);
+  top: var(--quick-top);
+  z-index: 1000;
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 4px;
+  min-width: 180px;
+  max-width: 300px;
+}
+
+.synofinder-quick-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.synofinder-quick-item:hover,
+.synofinder-quick-item.is-selected {
+  background-color: var(--background-modifier-hover);
+}
+
+.synofinder-quick-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  font-size: 0.75em;
+  font-weight: 500;
+  color: var(--text-muted);
+  background-color: var(--background-secondary);
+  border-radius: 3px;
+  flex-shrink: 0;
+}
