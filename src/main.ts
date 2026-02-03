@@ -37,6 +37,8 @@ function migrateSettings(old: OldSettings): SynoFinderSettings {
     })),
     wordNetDownloaded: old.wordNetDownloaded,
     mobyDownloaded: old.mobyDownloaded,
+    nspellDownloaded: DEFAULT_SETTINGS.nspellDownloaded,
+    offlineSpellingOnly: DEFAULT_SETTINGS.offlineSpellingOnly,
     maxCacheSize: DEFAULT_SETTINGS.maxCacheSize,
     lookupCache: { entries: {}, version: 1 },
   };
@@ -53,11 +55,30 @@ function needsCacheMigration(data: unknown): boolean {
          (obj.maxCacheSize === undefined || obj.lookupCache === undefined);
 }
 
+function needsSpellingMigration(data: unknown): boolean {
+  if (!data || typeof data !== "object") return false;
+  const obj = data as Record<string, unknown>;
+  // Check if it has the new format but missing spelling fields
+  return obj.sources !== undefined &&
+         Array.isArray(obj.sources) &&
+         obj.sources.length > 0 &&
+         "kind" in (obj.sources[0] as Record<string, unknown>) &&
+         (obj.nspellDownloaded === undefined || obj.offlineSpellingOnly === undefined);
+}
+
 function addCacheFields(data: Record<string, unknown>): SynoFinderSettings {
   return {
     ...data,
     maxCacheSize: data.maxCacheSize ?? DEFAULT_SETTINGS.maxCacheSize,
     lookupCache: (data.lookupCache as LookupCache) ?? { entries: {}, version: 1 },
+  } as SynoFinderSettings;
+}
+
+function addSpellingFields(data: Record<string, unknown>): SynoFinderSettings {
+  return {
+    ...data,
+    nspellDownloaded: data.nspellDownloaded ?? DEFAULT_SETTINGS.nspellDownloaded,
+    offlineSpellingOnly: data.offlineSpellingOnly ?? DEFAULT_SETTINGS.offlineSpellingOnly,
   } as SynoFinderSettings;
 }
 
@@ -102,6 +123,10 @@ export default class SynoFinderPlugin extends Plugin {
     } else if (needsCacheMigration(loadedData)) {
       // Migrate settings that have new source format but no cache fields
       this.settings = addCacheFields(loadedData as Record<string, unknown>);
+      await this.saveData(this.settings);
+    } else if (needsSpellingMigration(loadedData)) {
+      // Migrate settings that are missing spelling fields
+      this.settings = addSpellingFields(loadedData as Record<string, unknown>);
       await this.saveData(this.settings);
     } else if (loadedData && typeof loadedData === "object") {
       this.settings = Object.assign(

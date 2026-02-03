@@ -47,7 +47,12 @@ export class MerriamWebsterService implements SynonymService {
 
     // If result is just strings, it's spelling suggestions
     if (typeof data[0] === "string") {
-      return [];
+      const suggestions = data as string[];
+      return suggestions.slice(0, maxResults).map((suggestion) => ({
+        word: suggestion,
+        type: "spelling" as const,
+        source: "merriam-webster" as const,
+      }));
     }
 
     const entries = data as MerriamWebsterEntry[];

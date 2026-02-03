@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Instructions
+- Always write plans to `Claude/Plans` as a markdown file in the format `{YYYY-MM-DD}-{plan name}.md`
+- Always write research to: `Claude/Research` as a markdown file in the format `{YYYY-MM-DD}-{research title}.md`.
+
 ## Project Overview
 
 ObsidianSynoFinder is an Obsidian plugin that provides synonym and definition lookup functionality for words. This plugin uses TypeScript and yarn for package management.

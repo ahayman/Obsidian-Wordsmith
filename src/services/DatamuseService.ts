@@ -49,6 +49,25 @@ export class DatamuseService {
     }
   }
 
+  async getSpellingSuggestions(word: string): Promise<SynonymResult[]> {
+    // Use "sounds like" (sl) parameter for spelling suggestions
+    const url = `${DATAMUSE_BASE_URL}?sl=${encodeURIComponent(word)}&max=${this.maxResults}`;
+
+    try {
+      const response = await requestUrl({ url });
+      const data = response.json as Array<{ word: string; score?: number }>;
+
+      return data.map((item) => ({
+        word: item.word,
+        type: "spelling" as const,
+        source: "datamuse" as const,
+      }));
+    } catch (error) {
+      console.error("Datamuse spelling suggestions lookup failed:", error);
+      return [];
+    }
+  }
+
   async lookup(word: string): Promise<{ synonyms: SynonymResult[]; relatedWords: SynonymResult[] }> {
     const [synonyms, relatedWords] = await Promise.all([
       this.getSynonyms(word),

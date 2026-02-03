@@ -16,7 +16,7 @@ export type APIServiceType =
 export type TabId = string;
 
 // Source types for SynonymResult
-export type SynonymSource = "wordnet" | "moby" | "datamuse" | APIServiceType;
+export type SynonymSource = "wordnet" | "moby" | "datamuse" | "nspell" | APIServiceType;
 
 export const TAB_LABELS: Record<BuiltinTabId, string> = {
   local: "Local",
@@ -38,7 +38,7 @@ export interface APIServiceConfig {
 
 export interface SynonymResult {
   word: string;
-  type: "synonym" | "related";
+  type: "synonym" | "related" | "spelling";
   source: SynonymSource;
   partOfSpeech?: string;
   definition?: string;
@@ -92,6 +92,8 @@ export interface SynoFinderSettings {
   sources: SourceConfig[];
   wordNetDownloaded: boolean;
   mobyDownloaded: boolean;
+  nspellDownloaded: boolean;
+  offlineSpellingOnly: boolean;
   maxCacheSize: number;
   lookupCache: LookupCache;
 }
@@ -104,6 +106,8 @@ export const DEFAULT_SETTINGS: SynoFinderSettings = {
   ],
   wordNetDownloaded: false,
   mobyDownloaded: false,
+  nspellDownloaded: false,
+  offlineSpellingOnly: false,
   maxCacheSize: 100,
   lookupCache: {
     entries: {},

@@ -128,6 +128,11 @@
   color: var(--text-muted);
 }
 
+.synofinder-badge-spell {
+  background-color: rgba(var(--color-yellow-rgb), 0.3);
+  color: var(--color-yellow);
+}
+
 .synofinder-pos {
   font-size: 0.8em;
   color: var(--text-muted);
@@ -156,6 +161,11 @@
 .synofinder-source-datamuse {
   background-color: rgba(var(--color-orange-rgb), 0.2);
   color: var(--color-orange);
+}
+
+.synofinder-source-nspell {
+  background-color: rgba(var(--color-cyan-rgb), 0.2);
+  color: var(--color-cyan);
 }
 
 .synofinder-definition {

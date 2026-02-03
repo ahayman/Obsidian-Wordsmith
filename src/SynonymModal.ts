@@ -49,6 +49,15 @@ export class SynonymModal extends Modal {
   private getEnabledTabs(): TabInfo[] {
     const tabs: TabInfo[] = [];
 
+    // Add Spelling tab first if results exist
+    const spellingResults = this.lookupResult.results["spelling"];
+    if (spellingResults && spellingResults.length > 0) {
+      tabs.push({
+        id: "spelling",
+        label: "Spelling",
+      });
+    }
+
     for (const source of this.plugin.settings.sources) {
       if (!isSourceEnabled(source)) continue;
 
@@ -240,9 +249,13 @@ export class SynonymModal extends Modal {
 
     mainRow.createSpan({ cls: "synofinder-word", text: item.word });
 
-    const badgeClass = item.type === "synonym" ? "synofinder-badge-syn" : "synofinder-badge-rel";
-    const badgeText = item.type === "synonym" ? "Syn" : "Rel";
-    mainRow.createSpan({ cls: `synofinder-badge ${badgeClass}`, text: badgeText });
+    const badgeMap = {
+      synonym: { cls: "synofinder-badge-syn", text: "Syn" },
+      related: { cls: "synofinder-badge-rel", text: "Rel" },
+      spelling: { cls: "synofinder-badge-spell", text: "Spell" },
+    } as const;
+    const badge = badgeMap[item.type] ?? badgeMap["related"];
+    mainRow.createSpan({ cls: `synofinder-badge ${badge.cls}`, text: badge.text });
 
     if (item.partOfSpeech) {
       mainRow.createSpan({ cls: "synofinder-pos", text: item.partOfSpeech });
@@ -265,6 +278,7 @@ export class SynonymModal extends Modal {
     if (source === "wordnet") return "wordnet";
     if (source === "moby") return "moby";
     if (source === "datamuse") return "datamuse";
+    if (source === "nspell") return "nspell";
 
     // For API services, use shortened names
     const sourceLabels: Record<string, string> = {

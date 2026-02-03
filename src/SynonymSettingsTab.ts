@@ -74,6 +74,11 @@ export class SynonymSettingsTab extends PluginSettingTab {
 
     this.addWordNetSetting(containerEl);
     this.addMobySetting(containerEl);
+
+    new Setting(containerEl).setName("Spelling suggestions").setHeading();
+
+    this.addNSpellSetting(containerEl);
+    this.addOfflineSpellingSetting(containerEl);
   }
 
   private addCacheSettings(containerEl: HTMLElement): void {
@@ -329,5 +334,63 @@ export class SynonymSettingsTab extends PluginSettingTab {
         }
       });
     });
+  }
+
+  private addNSpellSetting(containerEl: HTMLElement): void {
+    const isDownloaded = this.plugin.settings.nspellDownloaded;
+    const statusText = isDownloaded ? " (downloaded)" : " (not downloaded)";
+
+    const nspellSetting = new Setting(containerEl)
+      .setName("Offline dictionary")
+      .setDesc("Download Hunspell dictionary for offline spelling suggestions (~2MB)" + statusText);
+
+    nspellSetting.addButton((button) => {
+      button.setButtonText(isDownloaded ? "Delete" : "Download");
+      if (!isDownloaded) {
+        button.setCta();
+      }
+      button.onClick(async () => {
+        if (isDownloaded) {
+          await this.plugin.dataService.nspell.delete();
+          this.plugin.settings.nspellDownloaded = false;
+          this.plugin.settings.offlineSpellingOnly = false;
+          await this.plugin.saveSettings();
+          this.display();
+        } else {
+          button.setButtonText("Downloading...");
+          button.setDisabled(true);
+
+          const success = await this.plugin.dataService.nspell.download((progress) => {
+            button.setButtonText(`${progress.percent}%`);
+          });
+
+          if (success) {
+            this.plugin.settings.nspellDownloaded = true;
+            await this.plugin.saveSettings();
+          }
+
+          this.display();
+        }
+      });
+    });
+  }
+
+  private addOfflineSpellingSetting(containerEl: HTMLElement): void {
+    // Only show if nspell is downloaded
+    if (!this.plugin.settings.nspellDownloaded) {
+      return;
+    }
+
+    new Setting(containerEl)
+      .setName("Offline spelling only")
+      .setDesc("Only use downloaded dictionary, don't query online services for spelling suggestions")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.offlineSpellingOnly)
+          .onChange(async (value) => {
+            this.plugin.settings.offlineSpellingOnly = value;
+            await this.plugin.saveSettings();
+          })
+      );
   }
 }

@@ -12,6 +12,8 @@ import {
 import { WordNetService } from "./WordNetService";
 import { MobyService } from "./MobyService";
 import { DatamuseService } from "./DatamuseService";
+import { NSpellService } from "./NSpellService";
+import { SpellingService } from "./SpellingService";
 import { SynonymService } from "./SynonymService";
 import { createAPIService } from "./api";
 import { CacheService } from "./CacheService";
@@ -22,6 +24,8 @@ export class DataService {
   wordNet: WordNetService;
   moby: MobyService;
   datamuse: DatamuseService;
+  nspell: NSpellService;
+  private spellingService: SpellingService;
   private apiServices: Map<string, SynonymService> = new Map();
   cacheService: CacheService;
 
@@ -31,6 +35,8 @@ export class DataService {
     this.wordNet = new WordNetService(app, pluginDir);
     this.moby = new MobyService(app, pluginDir);
     this.datamuse = new DatamuseService(settings.maxResults);
+    this.nspell = new NSpellService(app, pluginDir);
+    this.spellingService = new SpellingService(this.nspell, this.datamuse, settings);
     this.cacheService = new CacheService(settings.lookupCache, settings.maxCacheSize);
     this.initializeAPIServices();
   }
@@ -53,6 +59,7 @@ export class DataService {
     this.settings = settings;
     this.datamuse.setMaxResults(settings.maxResults);
     this.cacheService.setMaxSize(settings.maxCacheSize);
+    this.spellingService.updateSettings(settings);
     this.initializeAPIServices();
   }
 
@@ -74,6 +81,11 @@ export class DataService {
     if (this.isBuiltinSourceEnabled("local")) {
       loadPromises.push(this.wordNet.load());
       loadPromises.push(this.moby.load());
+    }
+
+    // Load nspell if downloaded
+    if (this.settings.nspellDownloaded) {
+      loadPromises.push(this.nspell.load());
     }
 
     await Promise.all(loadPromises);
@@ -117,6 +129,15 @@ export class DataService {
         }
       }
     }
+
+    // Add spelling suggestions lookup
+    lookupPromises.push(
+      this.spellingService.getSuggestions(word).then((spellingResults) => {
+        if (spellingResults.length > 0) {
+          result.results["spelling"] = spellingResults;
+        }
+      })
+    );
 
     await Promise.all(lookupPromises);
 
