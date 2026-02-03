@@ -148,7 +148,7 @@ export default class SynoFinderPlugin extends Plugin {
     this.dataService?.updateSettings(this.settings);
   }
 
-  private async findSynonyms(editor: Editor): Promise<void> {
+  private findSynonyms(editor: Editor): void {
     const extraction = getWordUnderCursor(editor);
 
     if (!extraction) {
@@ -157,25 +157,28 @@ export default class SynoFinderPlugin extends Plugin {
     }
 
     const { word, range } = extraction;
+    const tabMetadata = this.dataService.getEnabledTabMetadata(word);
 
-    new Notice(`Looking up "${word}"...`);
-
-    try {
-      const result = await this.dataService.lookup(word);
-
-      // Check if any source has results
-      const hasResults = Object.values(result.results).some((arr) => arr.length > 0);
-
-      if (!hasResults) {
-        new Notice(`No synonyms found for "${word}"`);
-        return;
-      }
-
-      const modal = new SynonymModal(this, result, range);
-      modal.open();
-    } catch (error) {
-      console.error("Synonym lookup failed:", error);
-      new Notice("Failed to look up synonyms. Check console for details.");
+    if (tabMetadata.length === 0) {
+      new Notice("No sources enabled");
+      return;
     }
+
+    // Create and open modal immediately
+    const modal = new SynonymModal(this, word, range, tabMetadata);
+    modal.open();
+
+    // Start streaming lookup
+    const { cancel } = this.dataService.lookupStreaming(word, {
+      onSourceComplete: (sourceId, results) => modal.onSourceComplete(sourceId, results),
+      onAllComplete: () => modal.onAllComplete(),
+    });
+
+    // Store original onClose, then wrap it to cancel on close
+    const originalOnClose = modal.onClose.bind(modal);
+    modal.onClose = () => {
+      cancel();
+      originalOnClose();
+    };
   }
 }

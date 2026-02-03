@@ -8,6 +8,10 @@ import {
   isSourceEnabled,
   SourceConfig,
   BuiltinTabId,
+  TabMetadata,
+  TAB_LABELS,
+  StreamingLookupCallbacks,
+  StreamingLookupHandle,
 } from "../types";
 import { WordNetService } from "./WordNetService";
 import { MobyService } from "./MobyService";
@@ -17,6 +21,7 @@ import { SpellingService } from "./SpellingService";
 import { SynonymService } from "./SynonymService";
 import { createAPIService } from "./api";
 import { CacheService } from "./CacheService";
+import { getAPIServiceInfo } from "./SynonymService";
 
 export class DataService {
   private app: App;
@@ -205,5 +210,129 @@ export class DataService {
       seen.add(normalized);
       return true;
     });
+  }
+
+  /**
+   * Returns metadata for all enabled tabs (known before any lookup).
+   * Includes spelling tab only if the word is misspelled (checked locally via nspell).
+   */
+  getEnabledTabMetadata(word: string): TabMetadata[] {
+    const tabs: TabMetadata[] = [];
+
+    // Add spelling tab only if nspell is loaded and word is misspelled
+    if (this.nspell.isLoaded() && !this.nspell.isCorrect(word)) {
+      tabs.push({ id: "spelling", label: "Spelling" });
+    }
+
+    // Add tabs based on enabled sources
+    for (const source of this.settings.sources) {
+      if (!isSourceEnabled(source)) continue;
+
+      if (isBuiltinSource(source)) {
+        tabs.push({
+          id: source.id,
+          label: TAB_LABELS[source.id],
+        });
+      } else if (isAPISource(source)) {
+        const serviceInfo = getAPIServiceInfo(source.config.type);
+        tabs.push({
+          id: source.id,
+          label: serviceInfo.name,
+        });
+      }
+    }
+
+    return tabs;
+  }
+
+  /**
+   * Performs a streaming lookup, calling callbacks as each source completes.
+   * Returns a handle with a cancel() function to stop callbacks if modal closes early.
+   */
+  lookupStreaming(word: string, callbacks: StreamingLookupCallbacks): StreamingLookupHandle {
+    let cancelled = false;
+
+    const handle: StreamingLookupHandle = {
+      cancel: () => {
+        cancelled = true;
+      },
+    };
+
+    // Check cache first
+    const cached = this.cacheService.get(word);
+    if (cached) {
+      // Return all cached results immediately
+      for (const [sourceId, results] of Object.entries(cached.results)) {
+        if (!cancelled) {
+          callbacks.onSourceComplete(sourceId, results);
+        }
+      }
+      if (!cancelled) {
+        callbacks.onAllComplete();
+      }
+      return handle;
+    }
+
+    // Track results for caching
+    const resultMap: Record<string, SynonymResult[]> = {};
+    const enabledSources = this.getEnabledSources();
+    let pendingCount = 0;
+
+    const onSourceDone = (sourceId: string, results: SynonymResult[]) => {
+      if (cancelled) return;
+      resultMap[sourceId] = results;
+      callbacks.onSourceComplete(sourceId, results);
+      pendingCount--;
+      if (pendingCount === 0) {
+        // All sources complete - cache and notify
+        const groupedResult: GroupedLookupResult = {
+          originalWord: word,
+          results: resultMap,
+        };
+        this.cacheService.set(word, groupedResult);
+        if (!cancelled) {
+          callbacks.onAllComplete();
+        }
+      }
+    };
+
+    // Process each enabled source
+    for (const source of enabledSources) {
+      if (isBuiltinSource(source)) {
+        if (source.id === "local") {
+          // Synchronous local lookup - complete immediately
+          pendingCount++;
+          const localResults = this.lookupLocal(word);
+          onSourceDone("local", localResults);
+        } else if (source.id === "datamuse") {
+          // Async datamuse lookup
+          pendingCount++;
+          void this.lookupDatamuse(word).then((results) => {
+            onSourceDone("datamuse", results);
+          });
+        }
+      } else if (isAPISource(source)) {
+        const service = this.apiServices.get(source.id);
+        if (service) {
+          pendingCount++;
+          void this.lookupAPIService(service, word).then((results) => {
+            onSourceDone(source.id, results);
+          });
+        }
+      }
+    }
+
+    // Add spelling suggestions lookup
+    pendingCount++;
+    void this.spellingService.getSuggestions(word).then((spellingResults) => {
+      onSourceDone("spelling", spellingResults);
+    });
+
+    // Edge case: if no sources were enabled, complete immediately
+    if (pendingCount === 0) {
+      callbacks.onAllComplete();
+    }
+
+    return handle;
   }
 }

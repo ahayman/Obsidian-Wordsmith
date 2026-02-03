@@ -1,26 +1,23 @@
 import { Modal, prepareSimpleSearch } from "obsidian";
 import {
   SynonymResult,
-  GroupedLookupResult,
   WordRange,
-  TAB_LABELS,
-  isBuiltinSource,
-  isAPISource,
-  isSourceEnabled,
+  TabMetadata,
+  TabState,
 } from "./types";
 import SynoFinderPlugin from "./main";
 import { replaceWord } from "./utils/wordExtractor";
-import { getAPIServiceInfo } from "./services/SynonymService";
-
-interface TabInfo {
-  id: string;
-  label: string;
-}
 
 export class SynonymModal extends Modal {
   private plugin: SynoFinderPlugin;
-  private lookupResult: GroupedLookupResult;
+  private word: string;
   private wordRange: WordRange;
+  private tabMetadata: TabMetadata[];
+
+  // Tab state management
+  private tabStates: Map<string, TabState> = new Map();
+  private tabResults: Map<string, SynonymResult[]> = new Map();
+  private allComplete: boolean = false;
 
   private inputEl: HTMLInputElement;
   private tabContainerEl: HTMLElement;
@@ -33,59 +30,96 @@ export class SynonymModal extends Modal {
 
   constructor(
     plugin: SynoFinderPlugin,
-    lookupResult: GroupedLookupResult,
-    wordRange: WordRange
+    word: string,
+    wordRange: WordRange,
+    tabMetadata: TabMetadata[]
   ) {
     super(plugin.app);
     this.plugin = plugin;
-    this.lookupResult = lookupResult;
+    this.word = word;
     this.wordRange = wordRange;
+    this.tabMetadata = tabMetadata;
 
-    // Set initial active tab to first in order that has results
-    const tabs = this.getEnabledTabs();
-    this.activeTabId = tabs[0]?.id || "local";
-  }
-
-  private getEnabledTabs(): TabInfo[] {
-    const tabs: TabInfo[] = [];
-
-    // Add Spelling tab first if results exist
-    const spellingResults = this.lookupResult.results["spelling"];
-    if (spellingResults && spellingResults.length > 0) {
-      tabs.push({
-        id: "spelling",
-        label: "Spelling",
-      });
+    // Initialize all tabs as loading with empty results
+    for (const tab of tabMetadata) {
+      this.tabStates.set(tab.id, "loading");
+      this.tabResults.set(tab.id, []);
     }
 
-    for (const source of this.plugin.settings.sources) {
-      if (!isSourceEnabled(source)) continue;
+    // Set initial active tab to first tab
+    this.activeTabId = tabMetadata[0]?.id || "";
+  }
 
-      const sourceId = isBuiltinSource(source) ? source.id : source.id;
-      const results = this.lookupResult.results[sourceId];
+  /**
+   * Called when a source completes its lookup.
+   * Updates tab state and triggers re-render.
+   */
+  onSourceComplete(sourceId: string, results: SynonymResult[]): void {
+    // Store results
+    this.tabResults.set(sourceId, results);
 
-      // Only show tab if it has results
-      if (!results || results.length === 0) continue;
+    // Update tab state based on results
+    const newState: TabState = results.length > 0 ? "results" : "grayed";
+    this.tabStates.set(sourceId, newState);
 
-      if (isBuiltinSource(source)) {
-        tabs.push({
-          id: source.id,
-          label: TAB_LABELS[source.id],
-        });
-      } else if (isAPISource(source)) {
-        const serviceInfo = getAPIServiceInfo(source.config.type);
-        tabs.push({
-          id: source.id,
-          label: serviceInfo.name,
-        });
+    // Auto-switch logic: if active tab just became grayed, switch to a better tab
+    if (sourceId === this.activeTabId && newState === "grayed") {
+      this.autoSwitchTab();
+    }
+
+    // Re-render if modal is open
+    if (this.tabContainerEl) {
+      this.renderTabs();
+      if (sourceId === this.activeTabId) {
+        this.updateFilteredResults();
+        this.renderResults();
+      }
+    }
+  }
+
+  /**
+   * Called when all sources have completed.
+   */
+  onAllComplete(): void {
+    this.allComplete = true;
+
+    // If all tabs are grayed, show "no results" state
+    const hasAnyResults = Array.from(this.tabStates.values()).some(
+      (state) => state === "results"
+    );
+
+    if (!hasAnyResults && this.resultsContainerEl) {
+      this.renderNoResults();
+    }
+  }
+
+  /**
+   * Auto-switch to a better tab when current tab becomes grayed.
+   */
+  private autoSwitchTab(): void {
+    // First try to find a tab with results
+    for (const tab of this.tabMetadata) {
+      if (this.tabStates.get(tab.id) === "results") {
+        this.activeTabId = tab.id;
+        this.selectedIndex = 0;
+        return;
       }
     }
 
-    return tabs;
+    // Otherwise find first tab still loading
+    for (const tab of this.tabMetadata) {
+      if (this.tabStates.get(tab.id) === "loading") {
+        this.activeTabId = tab.id;
+        this.selectedIndex = 0;
+        return;
+      }
+    }
+
+    // All grayed - stay on current tab (will show "no results" when all complete)
   }
 
   private getResultsForTab(tabId: string): SynonymResult[] {
-    return this.lookupResult.results[tabId] || [];
+    return this.tabResults.get(tabId) || [];
   }
 
   onOpen(): void {
@@ -93,24 +127,11 @@ export class SynonymModal extends Modal {
     contentEl.empty();
     contentEl.addClass("synofinder-modal");
 
-    const tabs = this.getEnabledTabs();
-
-    // Show "No Results Found" if no tabs have results
-    if (tabs.length === 0) {
-      const noResultsEl = contentEl.createDiv({ cls: "synofinder-no-results" });
-      noResultsEl.createDiv({ cls: "synofinder-no-results-title", text: "No Results Found" });
-      noResultsEl.createDiv({
-        cls: "synofinder-no-results-desc",
-        text: `No synonyms or suggestions found for "${this.lookupResult.originalWord}"`,
-      });
-      return;
-    }
-
     // Create search input
     const inputContainer = contentEl.createDiv({ cls: "synofinder-input-container" });
     this.inputEl = inputContainer.createEl("input", {
       type: "text",
-      placeholder: `Replace "${this.lookupResult.originalWord}" with...`,
+      placeholder: `Replace "${this.word}" with...`,
       cls: "synofinder-input",
     });
 
@@ -176,28 +197,50 @@ export class SynonymModal extends Modal {
 
   private renderTabs(): void {
     this.tabContainerEl.empty();
-    const enabledTabs = this.getEnabledTabs();
 
-    for (const tab of enabledTabs) {
+    for (const tab of this.tabMetadata) {
+      const state = this.tabStates.get(tab.id) || "loading";
+      const isActive = tab.id === this.activeTabId;
+
+      // Build CSS classes based on state
+      const classes = ["synofinder-tab"];
+      if (isActive) classes.push("synofinder-tab-active");
+      if (state === "grayed") classes.push("synofinder-tab-grayed");
+      if (state === "loading") classes.push("synofinder-tab-loading");
+
       const tabEl = this.tabContainerEl.createDiv({
-        cls: `synofinder-tab ${tab.id === this.activeTabId ? "synofinder-tab-active" : ""}`,
+        cls: classes.join(" "),
       });
 
-      const count = this.getResultsForTab(tab.id).length;
-      tabEl.setText(`${tab.label} (${count})`);
+      // Tab label
+      const labelSpan = tabEl.createSpan({ text: tab.label });
 
-      tabEl.addEventListener("click", () => {
-        this.activeTabId = tab.id;
-        this.selectedIndex = 0;
-        this.updateFilteredResults();
-        this.renderTabs();
-        this.renderResults();
-      });
+      // Show count for results, spinner for loading
+      if (state === "results") {
+        const count = this.getResultsForTab(tab.id).length;
+        labelSpan.setText(`${tab.label} (${count})`);
+      } else if (state === "loading") {
+        tabEl.createSpan({
+          cls: "synofinder-tab-spinner synofinder-spinner",
+          text: " ⟳",
+        });
+      }
+
+      // Click handler (only for non-grayed tabs)
+      if (state !== "grayed") {
+        tabEl.addEventListener("click", () => {
+          this.activeTabId = tab.id;
+          this.selectedIndex = 0;
+          this.updateFilteredResults();
+          this.renderTabs();
+          this.renderResults();
+        });
+      }
     }
   }
 
   private updateFilteredResults(): void {
-    const query = this.inputEl.value.trim().toLowerCase();
+    const query = this.inputEl?.value?.trim().toLowerCase() || "";
     const results = this.getResultsForTab(this.activeTabId);
 
     if (!query) {
@@ -219,6 +262,15 @@ export class SynonymModal extends Modal {
   private renderResults(): void {
     this.resultsContainerEl.empty();
 
+    const state = this.tabStates.get(this.activeTabId);
+
+    // Show loading spinner if tab is still loading
+    if (state === "loading") {
+      this.renderLoading();
+      return;
+    }
+
+    // Show empty state if no results after filtering
     if (this.filteredResults.length === 0) {
       const emptyEl = this.resultsContainerEl.createDiv({ cls: "synofinder-empty" });
       emptyEl.setText("No results found");
@@ -260,6 +312,25 @@ export class SynonymModal extends Modal {
     if (selectedEl) {
       selectedEl.scrollIntoView({ block: "nearest" });
     }
+  }
+
+  private renderLoading(): void {
+    const loadingEl = this.resultsContainerEl.createDiv({ cls: "synofinder-loading" });
+    loadingEl.createSpan({ cls: "synofinder-spinner", text: "⟳" });
+    loadingEl.createDiv({
+      cls: "synofinder-loading-text",
+      text: `Looking up "${this.word}"...`,
+    });
+  }
+
+  private renderNoResults(): void {
+    this.resultsContainerEl.empty();
+    const noResultsEl = this.resultsContainerEl.createDiv({ cls: "synofinder-no-results" });
+    noResultsEl.createDiv({ cls: "synofinder-no-results-title", text: "No Results Found" });
+    noResultsEl.createDiv({
+      cls: "synofinder-no-results-desc",
+      text: `No synonyms or suggestions found for "${this.word}"`,
+    });
   }
 
   private renderSuggestion(item: SynonymResult, el: HTMLElement): void {
@@ -317,20 +388,33 @@ export class SynonymModal extends Modal {
   }
 
   private cycleTab(direction: number): void {
-    const enabledTabs = this.getEnabledTabs();
-    if (enabledTabs.length <= 1) return;
+    if (this.tabMetadata.length <= 1) return;
 
-    const currentIndex = enabledTabs.findIndex((t) => t.id === this.activeTabId);
-    let newIndex = currentIndex + direction;
+    const currentIndex = this.tabMetadata.findIndex((t) => t.id === this.activeTabId);
+    let newIndex = currentIndex;
 
-    if (newIndex < 0) {
-      newIndex = enabledTabs.length - 1;
-    } else if (newIndex >= enabledTabs.length) {
-      newIndex = 0;
+    // Find next non-grayed tab in the given direction
+    for (let i = 0; i < this.tabMetadata.length; i++) {
+      newIndex = newIndex + direction;
+
+      // Wrap around
+      if (newIndex < 0) {
+        newIndex = this.tabMetadata.length - 1;
+      } else if (newIndex >= this.tabMetadata.length) {
+        newIndex = 0;
+      }
+
+      const tab = this.tabMetadata[newIndex];
+      const state = this.tabStates.get(tab?.id || "");
+
+      // Skip grayed tabs
+      if (state !== "grayed") {
+        break;
+      }
     }
 
-    const newTab = enabledTabs[newIndex];
-    if (newTab) {
+    const newTab = this.tabMetadata[newIndex];
+    if (newTab && newTab.id !== this.activeTabId) {
       this.activeTabId = newTab.id;
       this.selectedIndex = 0;
       this.updateFilteredResults();

@@ -60,6 +60,18 @@
   color: var(--text-on-accent);
 }
 
+/* Grayed Tab State */
+.synofinder-tab-grayed {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Loading Tab State */
+.synofinder-tab-loading .synofinder-tab-spinner {
+  margin-left: 4px;
+}
+
 /* Results Container */
 .synofinder-results {
   flex: 1;
@@ -73,6 +85,25 @@
   text-align: center;
   color: var(--text-muted);
   font-style: italic;
+}
+
+/* Loading Results Container */
+.synofinder-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+
+.synofinder-loading .synofinder-spinner {
+  font-size: 1.5em;
+}
+
+.synofinder-loading-text {
+  margin-top: 12px;
+  font-size: 0.9em;
 }
 
 .synofinder-no-results {

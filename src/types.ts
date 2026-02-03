@@ -145,3 +145,23 @@ export interface WordExtractionResult {
   range: WordRange;
   editor: Editor;
 }
+
+// Tab loading state for streaming modal
+export type TabState = "loading" | "results" | "grayed";
+
+// Tab metadata (known before lookup)
+export interface TabMetadata {
+  id: string;
+  label: string;
+}
+
+// Callback interface for streaming results
+export interface StreamingLookupCallbacks {
+  onSourceComplete: (sourceId: string, results: SynonymResult[]) => void;
+  onAllComplete: () => void;
+}
+
+// Return type for streaming lookup (allows cancellation)
+export interface StreamingLookupHandle {
+  cancel: () => void;
+}
