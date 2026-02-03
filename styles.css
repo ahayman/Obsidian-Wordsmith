@@ -1,0 +1,492 @@
+/* SynoFinder Modal Styles */
+
+.synofinder-modal {
+  display: flex;
+  flex-direction: column;
+  max-height: 70vh;
+}
+
+.synofinder-input-container {
+  padding: 0 0 8px 0;
+}
+
+.synofinder-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 1em;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+}
+
+.synofinder-input:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+  box-shadow: 0 0 0 2px rgba(var(--interactive-accent-rgb), 0.2);
+}
+
+/* Tab Bar */
+.synofinder-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 0 8px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+  margin-bottom: 8px;
+}
+
+.synofinder-tab {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  cursor: pointer;
+  color: var(--text-muted);
+  background-color: transparent;
+  transition: all 0.15s ease;
+}
+
+.synofinder-tab:hover {
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.synofinder-tab-active {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.synofinder-tab-active:hover {
+  background-color: var(--interactive-accent-hover);
+  color: var(--text-on-accent);
+}
+
+/* Results Container */
+.synofinder-results {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 200px;
+  max-height: 400px;
+}
+
+.synofinder-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Suggestion Items */
+.synofinder-suggestion {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  margin-bottom: 2px;
+}
+
+.synofinder-suggestion:hover,
+.synofinder-suggestion.is-selected {
+  background-color: var(--background-modifier-hover);
+}
+
+.synofinder-suggestion.is-selected {
+  background-color: var(--background-secondary);
+}
+
+.synofinder-suggestion-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.synofinder-suggestion-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.synofinder-word {
+  font-weight: 600;
+  font-size: 1em;
+}
+
+.synofinder-badge {
+  font-size: 0.7em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.synofinder-badge-syn {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.synofinder-badge-rel {
+  background-color: var(--background-modifier-border);
+  color: var(--text-muted);
+}
+
+.synofinder-pos {
+  font-size: 0.8em;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.synofinder-source {
+  font-size: 0.65em;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background-color: var(--background-secondary);
+  color: var(--text-faint);
+  margin-left: auto;
+}
+
+.synofinder-source-wordnet {
+  background-color: rgba(var(--color-blue-rgb), 0.2);
+  color: var(--color-blue);
+}
+
+.synofinder-source-moby {
+  background-color: rgba(var(--color-green-rgb), 0.2);
+  color: var(--color-green);
+}
+
+.synofinder-source-datamuse {
+  background-color: rgba(var(--color-orange-rgb), 0.2);
+  color: var(--color-orange);
+}
+
+.synofinder-definition {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  padding-left: 4px;
+  line-height: 1.4;
+}
+
+/* Instructions */
+.synofinder-instructions {
+  display: flex;
+  gap: 16px;
+  padding: 8px 0 0 0;
+  border-top: 1px solid var(--background-modifier-border);
+  margin-top: 8px;
+}
+
+.synofinder-instructions span {
+  font-size: 0.75em;
+  color: var(--text-faint);
+}
+
+/* Settings Styles */
+.synofinder-sources-desc {
+  margin-bottom: 12px;
+}
+
+/* Drag and Drop Sources List */
+.synofinder-sources-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.synofinder-source-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background-color: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  cursor: grab;
+  transition: all 0.15s ease;
+}
+
+.synofinder-source-item:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.synofinder-source-item.synofinder-dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.synofinder-source-item.synofinder-drag-over {
+  border-color: var(--interactive-accent);
+  background-color: rgba(var(--interactive-accent-rgb), 0.1);
+}
+
+.synofinder-drag-handle {
+  display: flex;
+  align-items: center;
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+
+.synofinder-drag-handle:hover {
+  color: var(--text-muted);
+}
+
+.synofinder-source-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.synofinder-source-name {
+  font-weight: 500;
+  color: var(--text-normal);
+}
+
+.synofinder-source-description {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.synofinder-source-toggle {
+  flex-shrink: 0;
+}
+
+.synofinder-source-toggle .setting-item {
+  border: none;
+  padding: 0;
+}
+
+.synofinder-source-toggle .setting-item-info {
+  display: none;
+}
+
+.synofinder-source-toggle .setting-item-control {
+  padding: 0;
+}
+
+.synofinder-status {
+  margin-left: 8px;
+  font-size: 0.9em;
+}
+
+.synofinder-status-ok {
+  color: var(--color-green);
+}
+
+.synofinder-status-missing {
+  color: var(--text-muted);
+}
+
+.synofinder-progress {
+  color: var(--text-accent);
+  margin-left: 4px;
+}
+
+/* Add API Service Button */
+.synofinder-add-api-container {
+  margin-bottom: 16px;
+}
+
+.synofinder-add-api-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-normal);
+  font-size: 0.9em;
+  transition: all 0.15s ease;
+}
+
+.synofinder-add-api-button:hover {
+  background-color: var(--background-modifier-hover);
+  border-color: var(--interactive-accent);
+}
+
+/* Source Name Row (for API services with key badge) */
+.synofinder-source-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Key Badge */
+.synofinder-key-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+}
+
+.synofinder-key-badge svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Source Actions (delete button) */
+.synofinder-source-actions {
+  display: flex;
+  align-items: center;
+  margin-right: 8px;
+}
+
+.synofinder-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: all 0.15s ease;
+}
+
+.synofinder-delete-btn:hover {
+  background-color: rgba(var(--color-red-rgb), 0.15);
+  color: var(--color-red);
+}
+
+/* Add API Service Modal */
+.synofinder-add-api-modal {
+  padding: 16px;
+}
+
+.synofinder-add-api-modal h2 {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+/* API Instructions */
+.synofinder-api-instructions {
+  background-color: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.synofinder-instructions-text {
+  font-size: 0.9em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.synofinder-registration-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.9em;
+}
+
+.synofinder-registration-link svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* API Key Setting */
+.synofinder-api-key-setting {
+  margin-bottom: 16px;
+}
+
+.synofinder-hidden {
+  display: none !important;
+}
+
+/* Validation Status */
+.synofinder-validation-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  margin-bottom: 16px;
+  font-size: 0.9em;
+}
+
+.synofinder-validation-status.synofinder-status-loading {
+  color: var(--text-muted);
+}
+
+.synofinder-validation-status.synofinder-status-success {
+  color: var(--color-green);
+}
+
+.synofinder-validation-status.synofinder-status-error {
+  color: var(--color-red);
+}
+
+.synofinder-validation-status svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Spinner Animation */
+.synofinder-spinner {
+  display: inline-flex;
+  animation: synofinder-spin 1s linear infinite;
+}
+
+@keyframes synofinder-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Modal Buttons */
+.synofinder-modal-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.synofinder-modal-buttons button {
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+}
+
+.synofinder-modal-buttons button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* API Source Colors in Results */
+.synofinder-source-merriam-webster {
+  background-color: rgba(var(--color-purple-rgb), 0.2);
+  color: var(--color-purple);
+}
+
+.synofinder-source-big-huge-thesaurus {
+  background-color: rgba(var(--color-cyan-rgb), 0.2);
+  color: var(--color-cyan);
+}
+
+.synofinder-source-words-api {
+  background-color: rgba(var(--color-yellow-rgb), 0.2);
+  color: var(--color-yellow);
+}
+
+.synofinder-source-api-ninjas {
+  background-color: rgba(var(--color-red-rgb), 0.2);
+  color: var(--color-red);
+}
+
+.synofinder-source-altervista {
+  background-color: rgba(var(--color-pink-rgb), 0.2);
+  color: var(--color-pink);
+}
+
+.synofinder-source-free-dictionary {
+  background-color: rgba(var(--color-green-rgb), 0.2);
+  color: var(--color-green);
+}
