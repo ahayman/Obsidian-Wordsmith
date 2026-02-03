@@ -75,6 +75,23 @@
   font-style: italic;
 }
 
+.synofinder-no-results {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.synofinder-no-results-title {
+  font-size: 1.2em;
+  font-weight: 600;
+  color: var(--text-normal);
+  margin-bottom: 8px;
+}
+
+.synofinder-no-results-desc {
+  font-size: 0.9em;
+  color: var(--text-muted);
+}
+
 /* Suggestion Items */
 .synofinder-suggestion {
   padding: 8px 12px;

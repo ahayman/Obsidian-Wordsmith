@@ -2,18 +2,17 @@ import { requestUrl } from "obsidian";
 import { SynonymResult } from "../../types";
 import { SynonymService } from "../SynonymService";
 
-interface AltervistaEntry {
-  word: string;
-  score: string;
+interface AltervistaList {
+  category: string;
+  synonyms: string; // Pipe-separated string of synonyms
 }
 
-interface AltervistaCategory {
-  category: string;
-  synonyms: AltervistaEntry[];
+interface AltervistaResponseItem {
+  list: AltervistaList;
 }
 
 interface AltervistaResponse {
-  response?: AltervistaCategory[];
+  response?: AltervistaResponseItem[];
 }
 
 const BASE_URL = "https://thesaurus.altervista.org/thesaurus/v1";
@@ -38,26 +37,31 @@ export class AltervistaService implements SynonymService {
     const results: SynonymResult[] = [];
 
     if (data.response) {
-      for (const category of data.response) {
-        const partOfSpeech = this.parseCategory(category.category);
+      for (const item of data.response) {
+        if (!item.list) continue;
 
-        for (const entry of category.synonyms) {
-          // Altervista returns comma-separated synonyms in the word field
-          const words = entry.word.split(",").map((w) => w.trim());
+        const partOfSpeech = this.parseCategory(item.list.category);
+        const synonymsStr = item.list.synonyms;
 
-          for (const synonym of words) {
-            // Skip if it contains parentheses (usually annotations)
-            if (synonym.includes("(") || synonym.includes(")")) continue;
-            // Skip antonyms marker
-            if (synonym.startsWith("antonym:")) continue;
+        if (typeof synonymsStr !== "string") continue;
 
-            results.push({
-              word: synonym,
-              type: "synonym",
-              source: "altervista",
-              partOfSpeech,
-            });
-          }
+        // Synonyms are pipe-separated
+        const entries = synonymsStr.split("|").map((s) => s.trim());
+
+        for (const entry of entries) {
+          // Skip if it contains parentheses (annotations like "similar term")
+          if (entry.includes("(") || entry.includes(")")) continue;
+          // Skip antonyms
+          if (entry.toLowerCase().includes("antonym")) continue;
+          // Skip empty entries
+          if (!entry) continue;
+
+          results.push({
+            word: entry,
+            type: "synonym",
+            source: "altervista",
+            partOfSpeech,
+          });
         }
       }
     }

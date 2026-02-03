@@ -61,6 +61,12 @@ export class SynonymModal extends Modal {
     for (const source of this.plugin.settings.sources) {
       if (!isSourceEnabled(source)) continue;
 
+      const sourceId = isBuiltinSource(source) ? source.id : source.id;
+      const results = this.lookupResult.results[sourceId];
+
+      // Only show tab if it has results
+      if (!results || results.length === 0) continue;
+
       if (isBuiltinSource(source)) {
         tabs.push({
           id: source.id,
@@ -86,6 +92,19 @@ export class SynonymModal extends Modal {
     const { contentEl } = this;
     contentEl.empty();
     contentEl.addClass("synofinder-modal");
+
+    const tabs = this.getEnabledTabs();
+
+    // Show "No Results Found" if no tabs have results
+    if (tabs.length === 0) {
+      const noResultsEl = contentEl.createDiv({ cls: "synofinder-no-results" });
+      noResultsEl.createDiv({ cls: "synofinder-no-results-title", text: "No Results Found" });
+      noResultsEl.createDiv({
+        cls: "synofinder-no-results-desc",
+        text: `No synonyms or suggestions found for "${this.lookupResult.originalWord}"`,
+      });
+      return;
+    }
 
     // Create search input
     const inputContainer = contentEl.createDiv({ cls: "synofinder-input-container" });
