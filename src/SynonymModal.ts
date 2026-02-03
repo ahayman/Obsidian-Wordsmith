@@ -1,4 +1,4 @@
-import { Modal, prepareSimpleSearch } from "obsidian";
+import { Modal, Platform, prepareSimpleSearch } from "obsidian";
 import {
   SynonymResult,
   WordRange,
@@ -28,6 +28,12 @@ export class SynonymModal extends Modal {
   private selectedIndex: number = 0;
   private filteredResults: SynonymResult[] = [];
   private ignoreMouseUntilMove: boolean = true;
+
+  // Swipe detection
+  private touchStartX: number = 0;
+  private touchStartY: number = 0;
+  private isSwiping: boolean = false;
+  private isAnimating: boolean = false;
 
   constructor(
     plugin: SynoFinderPlugin,
@@ -145,6 +151,11 @@ export class SynonymModal extends Modal {
     this.updateFilteredResults();
     this.renderResults();
 
+    // Touch event handlers for swipe gestures
+    this.resultsContainerEl.addEventListener("touchstart", (e) => this.handleTouchStart(e), { passive: true });
+    this.resultsContainerEl.addEventListener("touchmove", (e) => this.handleTouchMove(e), { passive: false });
+    this.resultsContainerEl.addEventListener("touchend", (e) => this.handleTouchEnd(e), { passive: true });
+
     // Add instructions
     const instructionsEl = contentEl.createDiv({ cls: "synofinder-instructions" });
     instructionsEl.createSpan({ text: "up/down navigate" });
@@ -192,8 +203,10 @@ export class SynonymModal extends Modal {
       return false;
     });
 
-    // Focus input
-    this.inputEl.focus();
+    // Focus input (skip on mobile to avoid keyboard covering the modal)
+    if (!Platform.isMobileApp) {
+      this.inputEl.focus();
+    }
   }
 
   private renderTabs(): void {
@@ -237,11 +250,14 @@ export class SynonymModal extends Modal {
       // Click handler (only for non-grayed tabs)
       if (state !== "grayed") {
         tabEl.addEventListener("click", () => {
-          this.activeTabId = tab.id;
-          this.selectedIndex = 0;
-          this.updateFilteredResults();
-          this.renderTabs();
-          this.renderResults();
+          if (this.isAnimating || tab.id === this.activeTabId) return;
+
+          // Determine direction based on tab position
+          const currentIndex = this.tabMetadata.findIndex((t) => t.id === this.activeTabId);
+          const newIndex = this.tabMetadata.findIndex((t) => t.id === tab.id);
+          const slideDirection = newIndex > currentIndex ? "right" : "left";
+
+          this.switchTabWithAnimation(tab.id, slideDirection);
         });
       }
     }
@@ -396,7 +412,7 @@ export class SynonymModal extends Modal {
   }
 
   private cycleTab(direction: number): void {
-    if (this.tabMetadata.length <= 1) return;
+    if (this.tabMetadata.length <= 1 || this.isAnimating) return;
 
     const currentIndex = this.tabMetadata.findIndex((t) => t.id === this.activeTabId);
     let newIndex = currentIndex;
@@ -423,11 +439,10 @@ export class SynonymModal extends Modal {
 
     const newTab = this.tabMetadata[newIndex];
     if (newTab && newTab.id !== this.activeTabId) {
-      this.activeTabId = newTab.id;
-      this.selectedIndex = 0;
-      this.updateFilteredResults();
-      this.renderTabs();
-      this.renderResults();
+      // direction > 0 means moving right (next tab), so slide left
+      // direction < 0 means moving left (previous tab), so slide right
+      const slideDirection = direction > 0 ? "right" : "left";
+      this.switchTabWithAnimation(newTab.id, slideDirection);
     }
   }
 
@@ -460,6 +475,94 @@ export class SynonymModal extends Modal {
       replaceWord(editor, this.wordRange, result.word);
     }
     this.close();
+  }
+
+  private handleTouchStart(e: TouchEvent): void {
+    if (this.isAnimating || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    this.touchStartX = touch.clientX;
+    this.touchStartY = touch.clientY;
+    this.isSwiping = false;
+  }
+
+  private handleTouchMove(e: TouchEvent): void {
+    if (this.isAnimating || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+
+    const deltaX = touch.clientX - this.touchStartX;
+    const deltaY = touch.clientY - this.touchStartY;
+
+    // Determine if this is a horizontal swipe (more horizontal than vertical movement)
+    if (!this.isSwiping && Math.abs(deltaX) > 10) {
+      // Check if horizontal movement is dominant
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        this.isSwiping = true;
+        e.preventDefault(); // Prevent vertical scrolling when swiping horizontally
+      }
+    }
+
+    if (this.isSwiping) {
+      e.preventDefault();
+    }
+  }
+
+  private handleTouchEnd(e: TouchEvent): void {
+    if (this.isAnimating) return;
+
+    const touch = e.changedTouches[0];
+    if (!touch) return;
+
+    const deltaX = touch.clientX - this.touchStartX;
+    const swipeThreshold = 50; // Minimum distance for a swipe
+
+    if (this.isSwiping && Math.abs(deltaX) >= swipeThreshold) {
+      // Swipe left (negative deltaX) = go to next tab (direction 1)
+      // Swipe right (positive deltaX) = go to previous tab (direction -1)
+      const direction = deltaX < 0 ? 1 : -1;
+      this.cycleTab(direction);
+    }
+
+    this.isSwiping = false;
+  }
+
+  private switchTabWithAnimation(newTabId: string, direction: "left" | "right"): void {
+    if (this.isAnimating || newTabId === this.activeTabId) return;
+    this.isAnimating = true;
+
+    // Determine slide-out direction (opposite to navigation)
+    const slideOutClass = direction === "right" ? "synofinder-slide-out-left" : "synofinder-slide-out-right";
+    const slideInClass = direction === "right" ? "synofinder-slide-in-right" : "synofinder-slide-in-left";
+
+    // Start slide-out animation
+    this.resultsContainerEl.addClass(slideOutClass);
+
+    // After slide-out, update content and slide-in
+    setTimeout(() => {
+      this.resultsContainerEl.removeClass(slideOutClass);
+
+      // Update to new tab
+      this.activeTabId = newTabId;
+      this.selectedIndex = 0;
+      this.updateFilteredResults();
+      this.renderTabs();
+      this.renderResults();
+
+      // Prepare for slide-in (start off-screen)
+      this.resultsContainerEl.addClass(slideInClass);
+
+      // Force reflow to ensure the starting position is applied
+      void this.resultsContainerEl.offsetWidth;
+
+      // Remove slide-in class to trigger animation to final position
+      this.resultsContainerEl.removeClass(slideInClass);
+
+      // Animation complete
+      setTimeout(() => {
+        this.isAnimating = false;
+      }, 150);
+    }, 150);
   }
 
   onClose(): void {

@@ -109,6 +109,30 @@
   overflow-y: auto;
   min-height: 200px;
   max-height: 400px;
+  transition: transform 0.15s ease-out, opacity 0.15s ease-out;
+}
+
+/* Slide animations for tab switching */
+.synofinder-slide-out-left {
+  transform: translateX(-30%);
+  opacity: 0;
+}
+
+.synofinder-slide-out-right {
+  transform: translateX(30%);
+  opacity: 0;
+}
+
+.synofinder-slide-in-left {
+  transform: translateX(-30%);
+  opacity: 0;
+  transition: none;
+}
+
+.synofinder-slide-in-right {
+  transform: translateX(30%);
+  opacity: 0;
+  transition: none;
 }
 
 .synofinder-empty {
@@ -613,4 +637,33 @@
 .synofinder-source-free-dictionary {
   background-color: rgba(var(--color-green-rgb), 0.2);
   color: var(--color-green);
+}
+
+/* Mobile-specific modal styles */
+body.is-mobile .synofinder-modal {
+  max-height: 80vh;
+}
+
+body.is-phone .synofinder-modal {
+  max-height: 85vh;
+}
+
+body.is-phone .synofinder-results {
+  max-height: none;
+  min-height: 250px;
+}
+
+/* Hide keyboard instructions on mobile (not relevant) */
+body.is-mobile .synofinder-instructions {
+  display: none;
+}
+
+/* Larger tap targets on mobile */
+body.is-mobile .synofinder-suggestion {
+  padding: 12px;
+  margin-bottom: 4px;
+}
+
+body.is-mobile .synofinder-tab {
+  padding: 8px 12px;
 }
