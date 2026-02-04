@@ -39,6 +39,11 @@ export class FreeDictionaryService implements SynonymService {
     const results: SynonymResult[] = [];
 
     for (const entry of data) {
+      // Handle null/undefined meanings
+      if (!entry.meanings || !Array.isArray(entry.meanings)) {
+        continue;
+      }
+
       let meaningIndex = 0;
       for (const meaning of entry.meanings) {
         // Top-level synonyms for this part of speech (no specific definition)

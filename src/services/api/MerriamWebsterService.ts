@@ -64,8 +64,10 @@ export class MerriamWebsterService implements SynonymService {
       const entryId = entry.meta?.id || "unknown";
 
       // Extract synonyms from meta.syns (each synGroup corresponds to a shortdef)
-      if (requestedTypes.includes("synonym") && entry.meta?.syns) {
+      if (requestedTypes.includes("synonym") && entry.meta?.syns && Array.isArray(entry.meta.syns)) {
         entry.meta.syns.forEach((synGroup, synGroupIndex) => {
+          // Ensure synGroup is an array before iterating
+          if (!Array.isArray(synGroup)) return;
           const definition = entry.shortdef?.[synGroupIndex];
           const defId = `mw-${entryId}-${synGroupIndex}`;
           for (const synonym of synGroup) {
@@ -82,8 +84,10 @@ export class MerriamWebsterService implements SynonymService {
       }
 
       // Extract antonyms from meta.ants (each antGroup corresponds to a shortdef)
-      if (requestedTypes.includes("antonym") && entry.meta?.ants) {
+      if (requestedTypes.includes("antonym") && entry.meta?.ants && Array.isArray(entry.meta.ants)) {
         entry.meta.ants.forEach((antGroup, antGroupIndex) => {
+          // Ensure antGroup is an array before iterating
+          if (!Array.isArray(antGroup)) return;
           const definition = entry.shortdef?.[antGroupIndex];
           const defId = `mw-${entryId}-${antGroupIndex}`;
           for (const antonym of antGroup) {

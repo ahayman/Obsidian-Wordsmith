@@ -78,7 +78,8 @@ export function getGroupDisplayDefinition(group: DefinitionGroup): string {
 
 /**
  * Checks if a group has a meaningful definition to display.
+ * Returns false for empty strings or whitespace-only strings.
  */
 export function hasDisplayableDefinition(group: DefinitionGroup): boolean {
-  return !!group.definition && group.definition.length > 0;
+  return !!group.definition && group.definition.trim().length > 0;
 }

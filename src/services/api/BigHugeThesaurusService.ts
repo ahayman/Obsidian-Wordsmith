@@ -36,6 +36,11 @@ export class BigHugeThesaurusService implements SynonymService {
     const response = await requestUrl({ url });
     const data = response.json as BigHugeThesaurusResponse;
 
+    // Handle null/undefined response
+    if (!data || typeof data !== "object") {
+      return [];
+    }
+
     const results: SynonymResult[] = [];
     const partsOfSpeech: (keyof BigHugeThesaurusResponse)[] = [
       "noun",

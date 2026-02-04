@@ -30,7 +30,7 @@ export class AltervistaService implements SynonymService {
 
   async lookup(word: string, maxResults: number, types?: RelationshipType[]): Promise<SynonymResult[]> {
     const requestedTypes = types || ["synonym", "antonym"];
-    const url = `${BASE_URL}?word=${encodeURIComponent(word)}&language=en_US&key=${this.apiKey}&output=json`;
+    const url = `${BASE_URL}?word=${encodeURIComponent(word)}&language=en_US&key=${encodeURIComponent(this.apiKey)}&output=json`;
 
     const response = await requestUrl({ url });
     const data = response.json as AltervistaResponse;
@@ -114,7 +114,7 @@ export class AltervistaService implements SynonymService {
 
   async validate(): Promise<{ valid: boolean; error?: string }> {
     try {
-      const url = `${BASE_URL}?word=test&language=en_US&key=${this.apiKey}&output=json`;
+      const url = `${BASE_URL}?word=test&language=en_US&key=${encodeURIComponent(this.apiKey)}&output=json`;
       const response = await requestUrl({ url });
 
       // A successful response means the key is valid

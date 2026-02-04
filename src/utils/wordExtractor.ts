@@ -5,10 +5,15 @@ export function getWordUnderCursor(editor: Editor): WordExtractionResult | null 
   const selection = editor.getSelection();
 
   if (selection && selection.length > 0) {
+    const trimmedSelection = selection.trim();
+    // Return null if selection is only whitespace
+    if (trimmedSelection.length === 0) {
+      return null;
+    }
     const from = editor.getCursor("from");
     const to = editor.getCursor("to");
     return {
-      word: selection.trim(),
+      word: trimmedSelection,
       range: { from, to },
       editor,
     };
@@ -54,10 +59,16 @@ function matchCapitalization(original: string, replacement: string): string {
 
   const firstChar = original.charAt(0);
 
-  // Check if first letter is uppercase
-  if (firstChar !== firstChar.toLowerCase()) {
-    return replacement.charAt(0).toUpperCase() + replacement.slice(1);
+  // Check if the entire original is uppercase (e.g., "HELLO")
+  if (original === original.toUpperCase() && original !== original.toLowerCase()) {
+    return replacement.toUpperCase();
   }
 
-  return replacement;
+  // Check if first letter is uppercase (e.g., "Hello")
+  if (firstChar !== firstChar.toLowerCase()) {
+    return replacement.charAt(0).toUpperCase() + replacement.slice(1).toLowerCase();
+  }
+
+  // Original is lowercase, ensure replacement is lowercase
+  return replacement.toLowerCase();
 }
