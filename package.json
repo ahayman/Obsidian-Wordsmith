@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "build:release": "sh ./release.sh",
     "lint": "eslint .",
     "test": "jest",
     "test:watch": "jest --watch",
