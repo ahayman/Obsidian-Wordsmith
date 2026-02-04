@@ -46,10 +46,18 @@ export class CacheService {
 
   /**
    * Get cached results for a specific service, filtered by types.
+   * Returns null if any of the requested types haven't been fetched yet.
    */
   getServiceForTypes(word: string, serviceId: string, types: RelationshipType[]): SynonymResult[] | null {
     const results = this.getService(word, serviceId);
     if (!results) return null;
+
+    // Verify all requested types have been fetched - if not, return null
+    // so the caller knows to fetch the missing types
+    const fetchedTypes = this.getFetchedTypes(word, serviceId);
+    if (!types.every(t => fetchedTypes.includes(t))) {
+      return null;
+    }
 
     return results.filter(r => types.includes(r.type as RelationshipType));
   }
