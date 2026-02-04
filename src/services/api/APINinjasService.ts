@@ -1,6 +1,6 @@
 import { requestUrl } from "obsidian";
-import { SynonymResult } from "../../types";
-import { SynonymService } from "../SynonymService";
+import { SynonymResult, RelationshipType } from "../../types";
+import { SynonymService, API_SERVICE_INFO } from "../SynonymService";
 
 interface APINinjasThesaurusResponse {
   word: string;
@@ -21,7 +21,8 @@ export class APINinjasService implements SynonymService {
     this.apiKey = apiKey;
   }
 
-  async lookup(word: string, maxResults: number): Promise<SynonymResult[]> {
+  async lookup(word: string, maxResults: number, types?: RelationshipType[]): Promise<SynonymResult[]> {
+    const requestedTypes = types || ["synonym", "antonym"];
     const url = `${BASE_URL}?word=${encodeURIComponent(word)}`;
 
     const response = await requestUrl({
@@ -34,7 +35,7 @@ export class APINinjasService implements SynonymService {
     const data = response.json as APINinjasThesaurusResponse;
     const results: SynonymResult[] = [];
 
-    if (data.synonyms) {
+    if (requestedTypes.includes("synonym") && data.synonyms) {
       for (const synonym of data.synonyms) {
         results.push({
           word: synonym,
@@ -44,7 +45,21 @@ export class APINinjasService implements SynonymService {
       }
     }
 
+    if (requestedTypes.includes("antonym") && data.antonyms) {
+      for (const antonym of data.antonyms) {
+        results.push({
+          word: antonym,
+          type: "antonym",
+          source: "api-ninjas",
+        });
+      }
+    }
+
     return results.slice(0, maxResults);
+  }
+
+  supportedTypes(): RelationshipType[] {
+    return API_SERVICE_INFO["api-ninjas"].supportedTypes;
   }
 
   async validate(): Promise<{ valid: boolean; error?: string }> {

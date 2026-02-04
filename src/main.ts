@@ -1,5 +1,5 @@
 import { Editor, MarkdownFileInfo, MarkdownView, Notice, Plugin } from "obsidian";
-import { SynoFinderSettings, DEFAULT_SETTINGS, SourceConfig, LookupCache } from "./types";
+import { SynoFinderSettings, DEFAULT_SETTINGS, SourceConfig, LookupCache, RelationshipType } from "./types";
 import { DataService } from "./services/DataService";
 import { SynonymModal } from "./SynonymModal";
 import { SynonymSettingsTab } from "./SynonymSettingsTab";
@@ -98,22 +98,72 @@ export default class SynoFinderPlugin extends Plugin {
 
     await this.dataService.initialize();
 
+    // Modal commands for different relationship types
     this.addCommand({
       id: "find-synonyms",
       name: "Find synonyms for word under cursor",
       editorCallback: (editor: Editor, _ctx: MarkdownView | MarkdownFileInfo) => {
-        void this.findSynonyms(editor);
+        void this.findWords(editor, "synonym");
       },
     });
 
-    // Register Quick Replace command
+    this.addCommand({
+      id: "find-antonyms",
+      name: "Find antonyms for word under cursor",
+      editorCallback: (editor: Editor, _ctx: MarkdownView | MarkdownFileInfo) => {
+        void this.findWords(editor, "antonym");
+      },
+    });
+
+    this.addCommand({
+      id: "find-related",
+      name: "Find related words for word under cursor",
+      editorCallback: (editor: Editor, _ctx: MarkdownView | MarkdownFileInfo) => {
+        void this.findWords(editor, "related");
+      },
+    });
+
+    this.addCommand({
+      id: "find-hypernyms",
+      name: "Find hypernyms (more general) for word under cursor",
+      editorCallback: (editor: Editor, _ctx: MarkdownView | MarkdownFileInfo) => {
+        void this.findWords(editor, "hypernym");
+      },
+    });
+
+    this.addCommand({
+      id: "find-hyponyms",
+      name: "Find hyponyms (more specific) for word under cursor",
+      editorCallback: (editor: Editor, _ctx: MarkdownView | MarkdownFileInfo) => {
+        void this.findWords(editor, "hyponym");
+      },
+    });
+
+    // Quick Replace commands
     const quickReplaceSuggest = new QuickReplaceSuggest(this.app, this.dataService);
 
+    this.addCommand({
+      id: "quick-replace-synonym",
+      name: "Quick replace - synonym",
+      editorCallback: (editor: Editor) => {
+        void quickReplaceSuggest.triggerForWord(editor, "synonym");
+      },
+    });
+
+    this.addCommand({
+      id: "quick-replace-antonym",
+      name: "Quick replace - antonym",
+      editorCallback: (editor: Editor) => {
+        void quickReplaceSuggest.triggerForWord(editor, "antonym");
+      },
+    });
+
+    // Keep old quick-replace command for backward compatibility (defaults to synonym)
     this.addCommand({
       id: "quick-replace",
       name: "Quick replace - show replacement options",
       editorCallback: (editor: Editor) => {
-        void quickReplaceSuggest.triggerForWord(editor);
+        void quickReplaceSuggest.triggerForWord(editor, "synonym");
       },
     });
 
@@ -160,7 +210,11 @@ export default class SynoFinderPlugin extends Plugin {
     this.dataService?.updateSettings(this.settings);
   }
 
-  private findSynonyms(editor: Editor): void {
+  /**
+   * Find words of a specific relationship type for the word under cursor.
+   * Opens a modal with the filter pre-set to the requested type.
+   */
+  private findWords(editor: Editor, initialType: RelationshipType): void {
     const extraction = getWordUnderCursor(editor);
 
     if (!extraction) {
@@ -176,15 +230,27 @@ export default class SynoFinderPlugin extends Plugin {
       return;
     }
 
-    // Create and open modal immediately
-    const modal = new SynonymModal(this, word, range, tabMetadata);
+    // Create and open modal immediately with initial type
+    const modal = new SynonymModal(this, word, range, tabMetadata, initialType);
     modal.open();
 
-    // Start streaming lookup
-    const { cancel } = this.dataService.lookupStreaming(word, {
-      onSourceComplete: (sourceId, results) => modal.onSourceComplete(sourceId, results),
-      onAllComplete: () => modal.onAllComplete(),
-    });
+    // Determine initial types to fetch based on the requested type
+    // Always fetch synonyms + antonyms upfront (most common)
+    // If initialType is hypernym/hyponym/related, also fetch that type
+    const initialTypes: RelationshipType[] = ["synonym", "antonym"];
+    if (!initialTypes.includes(initialType)) {
+      initialTypes.push(initialType);
+    }
+
+    // Start streaming lookup with initial types
+    const { cancel } = this.dataService.lookupStreaming(
+      word,
+      {
+        onSourceComplete: (sourceId, results) => modal.onSourceComplete(sourceId, results),
+        onAllComplete: () => modal.onAllComplete(),
+      },
+      initialTypes
+    );
 
     // Store original onClose, then wrap it to cancel on close
     const originalOnClose = modal.onClose.bind(modal);

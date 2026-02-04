@@ -1,6 +1,6 @@
 import { requestUrl } from "obsidian";
-import { SynonymResult } from "../../types";
-import { SynonymService } from "../SynonymService";
+import { SynonymResult, RelationshipType } from "../../types";
+import { SynonymService, API_SERVICE_INFO } from "../SynonymService";
 
 interface MerriamWebsterSense {
   dt?: Array<[string, string | Array<{ wd: string }>]>;
@@ -34,7 +34,8 @@ export class MerriamWebsterService implements SynonymService {
     this.apiKey = apiKey;
   }
 
-  async lookup(word: string, maxResults: number): Promise<SynonymResult[]> {
+  async lookup(word: string, maxResults: number, types?: RelationshipType[]): Promise<SynonymResult[]> {
+    const requestedTypes = types || ["synonym", "antonym"];
     const url = `${BASE_URL}/${encodeURIComponent(word)}?key=${this.apiKey}`;
 
     const response = await requestUrl({ url });
@@ -63,7 +64,7 @@ export class MerriamWebsterService implements SynonymService {
       const definition = entry.shortdef?.[0];
 
       // Extract synonyms from meta.syns
-      if (entry.meta?.syns) {
+      if (requestedTypes.includes("synonym") && entry.meta?.syns) {
         for (const synGroup of entry.meta.syns) {
           for (const synonym of synGroup) {
             results.push({
@@ -76,18 +77,37 @@ export class MerriamWebsterService implements SynonymService {
           }
         }
       }
+
+      // Extract antonyms from meta.ants
+      if (requestedTypes.includes("antonym") && entry.meta?.ants) {
+        for (const antGroup of entry.meta.ants) {
+          for (const antonym of antGroup) {
+            results.push({
+              word: antonym,
+              type: "antonym",
+              source: "merriam-webster",
+              partOfSpeech,
+              definition,
+            });
+          }
+        }
+      }
     }
 
-    // Deduplicate by word
+    // Deduplicate by word+type
     const seen = new Set<string>();
     const dedupedResults = results.filter((r) => {
-      const key = r.word.toLowerCase();
+      const key = `${r.type}:${r.word.toLowerCase()}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
 
     return dedupedResults.slice(0, maxResults);
+  }
+
+  supportedTypes(): RelationshipType[] {
+    return API_SERVICE_INFO["merriam-webster"].supportedTypes;
   }
 
   async validate(): Promise<{ valid: boolean; error?: string }> {

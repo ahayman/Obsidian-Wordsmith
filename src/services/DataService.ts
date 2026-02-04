@@ -12,6 +12,8 @@ import {
   TAB_LABELS,
   StreamingLookupCallbacks,
   StreamingLookupHandle,
+  RelationshipType,
+  ALL_RELATIONSHIP_TYPES,
 } from "../types";
 import { WordNetService } from "./WordNetService";
 import { MobyService } from "./MobyService";
@@ -21,7 +23,7 @@ import { SpellingService } from "./SpellingService";
 import { SynonymService } from "./SynonymService";
 import { createAPIService } from "./api";
 import { CacheService } from "./CacheService";
-import { getAPIServiceInfo } from "./SynonymService";
+import { getAPIServiceInfo, BUILTIN_SERVICE_TYPES } from "./SynonymService";
 
 export class DataService {
   private app: App;
@@ -189,9 +191,9 @@ export class DataService {
       : dedupedResults;
   }
 
-  private async lookupDatamuse(word: string): Promise<SynonymResult[]> {
+  private async lookupDatamuse(word: string, types?: RelationshipType[]): Promise<SynonymResult[]> {
     try {
-      const apiResults = await this.datamuse.lookup(word);
+      const apiResults = await this.datamuse.lookup(word, types);
       const datamuseResults = [...apiResults.synonyms, ...apiResults.relatedWords];
       const dedupedResults = this.deduplicateResults(datamuseResults, word);
       return this.settings.maxResults > 0
@@ -205,10 +207,11 @@ export class DataService {
 
   private async lookupAPIService(
     service: SynonymService,
-    word: string
+    word: string,
+    types?: RelationshipType[]
   ): Promise<SynonymResult[]> {
     try {
-      const results = await service.lookup(word, this.settings.maxResults);
+      const results = await service.lookup(word, this.settings.maxResults, types);
       return this.deduplicateResults(results, word);
     } catch (error) {
       console.error(`API service ${service.name} lookup failed:`, error);
@@ -233,11 +236,12 @@ export class DataService {
   /**
    * Returns top 5 replacement suggestions for Quick Replace command.
    * If word is misspelled, returns spelling corrections.
-   * Otherwise, returns synonyms from the first enabled source.
+   * Otherwise, returns results of the requested type from the first enabled source.
    * Uses per-service caching.
    */
-  async getQuickReplaceSuggestions(word: string): Promise<SynonymResult[]> {
+  async getQuickReplaceSuggestions(word: string, type: RelationshipType = "synonym"): Promise<SynonymResult[]> {
     // Check spelling first - if misspelled, return spelling corrections
+    // Spelling takes priority over both synonyms and antonyms
     if (this.nspell.isLoaded() && !this.nspell.isCorrect(word)) {
       // Check cache for spelling
       const cached = this.cacheService.getService(word, "spelling");
@@ -245,41 +249,49 @@ export class DataService {
         return cached.slice(0, 5);
       }
       const suggestions = await this.spellingService.getSuggestions(word);
-      this.cacheService.setService(word, "spelling", suggestions);
+      this.cacheService.setService(word, "spelling", suggestions, []);
       return suggestions.slice(0, 5);
     }
 
-    // Get synonyms from first enabled source
+    // Get results of requested type from first enabled source that supports it
     const enabledSources = this.getEnabledSources();
+    const requestedTypes: RelationshipType[] = [type];
+
     for (const source of enabledSources) {
       if (isBuiltinSource(source)) {
+        const supportedTypes = BUILTIN_SERVICE_TYPES[source.id];
+        if (!supportedTypes.includes(type)) continue;
+
         if (source.id === "local") {
-          const cached = this.cacheService.getService(word, "local");
+          const cached = this.cacheService.getServiceForTypes(word, "local", requestedTypes);
           if (cached) {
             return cached.slice(0, 5);
           }
           const results = this.lookupLocal(word);
-          this.cacheService.setService(word, "local", results);
-          return results.slice(0, 5);
+          this.cacheService.setService(word, "local", results, ["synonym", "related"]);
+          return results.filter(r => r.type === type).slice(0, 5);
         } else if (source.id === "datamuse") {
-          const cached = this.cacheService.getService(word, "datamuse");
+          const cached = this.cacheService.getServiceForTypes(word, "datamuse", requestedTypes);
           if (cached) {
             return cached.slice(0, 5);
           }
-          const results = await this.lookupDatamuse(word);
-          this.cacheService.setService(word, "datamuse", results);
-          return results.slice(0, 5);
+          const results = await this.lookupDatamuse(word, requestedTypes);
+          this.cacheService.setService(word, "datamuse", results, requestedTypes);
+          return results.filter(r => r.type === type).slice(0, 5);
         }
       } else if (isAPISource(source)) {
-        const cached = this.cacheService.getService(word, source.id);
+        const serviceInfo = getAPIServiceInfo(source.config.type);
+        if (!serviceInfo.supportedTypes.includes(type)) continue;
+
+        const cached = this.cacheService.getServiceForTypes(word, source.id, requestedTypes);
         if (cached) {
           return cached.slice(0, 5);
         }
         const service = this.apiServices.get(source.id);
         if (service) {
-          const results = await this.lookupAPIService(service, word);
-          this.cacheService.setService(word, source.id, results);
-          return results.slice(0, 5);
+          const results = await this.lookupAPIService(service, word, requestedTypes);
+          this.cacheService.setService(word, source.id, results, requestedTypes);
+          return results.filter(r => r.type === type).slice(0, 5);
         }
       }
     }
@@ -325,8 +337,16 @@ export class DataService {
    * Performs a streaming lookup, calling callbacks as each source completes.
    * Uses per-service caching - cached services stream immediately, uncached are fetched.
    * Returns a handle with a cancel() function to stop callbacks if modal closes early.
+   *
+   * @param word - The word to look up
+   * @param callbacks - Callbacks for streaming results
+   * @param initialTypes - Relationship types to fetch initially (defaults to synonym + antonym)
    */
-  lookupStreaming(word: string, callbacks: StreamingLookupCallbacks): StreamingLookupHandle {
+  lookupStreaming(
+    word: string,
+    callbacks: StreamingLookupCallbacks,
+    initialTypes: RelationshipType[] = ["synonym", "antonym"]
+  ): StreamingLookupHandle {
     let cancelled = false;
 
     const handle: StreamingLookupHandle = {
@@ -338,11 +358,11 @@ export class DataService {
     const enabledSources = this.getEnabledSources();
     let pendingCount = 0;
 
-    const onSourceDone = (sourceId: string, results: SynonymResult[], fromCache: boolean) => {
+    const onSourceDone = (sourceId: string, results: SynonymResult[], fromCache: boolean, fetchedTypes: RelationshipType[]) => {
       if (cancelled) return;
       // Cache if not already cached
       if (!fromCache) {
-        this.cacheService.setService(word, sourceId, results);
+        this.cacheService.setService(word, sourceId, results, fetchedTypes);
       }
       callbacks.onSourceComplete(sourceId, results);
       pendingCount--;
@@ -354,36 +374,46 @@ export class DataService {
     // Process each enabled source - check cache first
     for (const source of enabledSources) {
       if (isBuiltinSource(source)) {
+        const supportedTypes = BUILTIN_SERVICE_TYPES[source.id];
+        const typesToFetch = initialTypes.filter(t => supportedTypes.includes(t));
+
         if (source.id === "local") {
           pendingCount++;
           const cached = this.cacheService.getService(word, "local");
           if (cached) {
-            onSourceDone("local", cached, true);
+            onSourceDone("local", cached, true, ["synonym", "related"]);
           } else {
             const localResults = this.lookupLocal(word);
-            onSourceDone("local", localResults, false);
+            onSourceDone("local", localResults, false, ["synonym", "related"]);
           }
         } else if (source.id === "datamuse") {
           pendingCount++;
-          const cached = this.cacheService.getService(word, "datamuse");
-          if (cached) {
-            onSourceDone("datamuse", cached, true);
+          // Check if we have all requested types cached
+          const missingTypes = this.cacheService.getMissingTypes(word, "datamuse", typesToFetch);
+          if (missingTypes.length === 0) {
+            const cached = this.cacheService.getService(word, "datamuse");
+            onSourceDone("datamuse", cached || [], true, typesToFetch);
           } else {
-            void this.lookupDatamuse(word).then((results) => {
-              onSourceDone("datamuse", results, false);
+            void this.lookupDatamuse(word, typesToFetch).then((results) => {
+              onSourceDone("datamuse", results, false, typesToFetch);
             });
           }
         }
       } else if (isAPISource(source)) {
         pendingCount++;
-        const cached = this.cacheService.getService(word, source.id);
-        if (cached) {
-          onSourceDone(source.id, cached, true);
+        const serviceInfo = getAPIServiceInfo(source.config.type);
+        const typesToFetch = initialTypes.filter(t => serviceInfo.supportedTypes.includes(t));
+
+        // Check if we have all requested types cached
+        const missingTypes = this.cacheService.getMissingTypes(word, source.id, typesToFetch);
+        if (missingTypes.length === 0) {
+          const cached = this.cacheService.getService(word, source.id);
+          onSourceDone(source.id, cached || [], true, typesToFetch);
         } else {
           const service = this.apiServices.get(source.id);
           if (service) {
-            void this.lookupAPIService(service, word).then((results) => {
-              onSourceDone(source.id, results, false);
+            void this.lookupAPIService(service, word, typesToFetch).then((results) => {
+              onSourceDone(source.id, results, false, typesToFetch);
             });
           } else {
             // No service available, decrement pending count
@@ -397,10 +427,10 @@ export class DataService {
     pendingCount++;
     const cachedSpelling = this.cacheService.getService(word, "spelling");
     if (cachedSpelling) {
-      onSourceDone("spelling", cachedSpelling, true);
+      onSourceDone("spelling", cachedSpelling, true, []);
     } else {
       void this.spellingService.getSuggestions(word).then((spellingResults) => {
-        onSourceDone("spelling", spellingResults, false);
+        onSourceDone("spelling", spellingResults, false, []);
       });
     }
 
@@ -410,5 +440,117 @@ export class DataService {
     }
 
     return handle;
+  }
+
+  /**
+   * Fetch additional relationship types for a word (lazy loading).
+   * Only fetches from services that support the requested types and haven't cached them yet.
+   * Returns results from all services combined.
+   */
+  async fetchAdditionalTypes(
+    word: string,
+    types: RelationshipType[],
+    onSourceUpdate?: (sourceId: string, results: SynonymResult[]) => void
+  ): Promise<SynonymResult[]> {
+    const allResults: SynonymResult[] = [];
+    const enabledSources = this.getEnabledSources();
+    const fetchPromises: Promise<void>[] = [];
+
+    for (const source of enabledSources) {
+      let supportedTypes: RelationshipType[];
+      let sourceId: string;
+
+      if (isBuiltinSource(source)) {
+        supportedTypes = BUILTIN_SERVICE_TYPES[source.id];
+        sourceId = source.id;
+      } else if (isAPISource(source)) {
+        const serviceInfo = getAPIServiceInfo(source.config.type);
+        supportedTypes = serviceInfo.supportedTypes;
+        sourceId = source.id;
+      } else {
+        continue;
+      }
+
+      // Filter to types this service supports
+      const typesToFetch = types.filter(t => supportedTypes.includes(t));
+      if (typesToFetch.length === 0) continue;
+
+      // Check which types are missing from cache
+      const missingTypes = this.cacheService.getMissingTypes(word, sourceId, typesToFetch);
+      if (missingTypes.length === 0) {
+        // All cached - get from cache
+        const cached = this.cacheService.getServiceForTypes(word, sourceId, typesToFetch);
+        if (cached) {
+          allResults.push(...cached);
+          onSourceUpdate?.(sourceId, this.cacheService.getService(word, sourceId) || []);
+        }
+        continue;
+      }
+
+      // Need to fetch missing types
+      const fetchPromise = (async () => {
+        let results: SynonymResult[] = [];
+
+        if (isBuiltinSource(source)) {
+          if (source.id === "datamuse") {
+            results = await this.lookupDatamuse(word, missingTypes);
+          }
+          // Local doesn't support lazy loading - it fetches everything at once
+        } else if (isAPISource(source)) {
+          const service = this.apiServices.get(source.id);
+          if (service) {
+            results = await this.lookupAPIService(service, word, missingTypes);
+          }
+        }
+
+        if (results.length > 0) {
+          this.cacheService.setService(word, sourceId, results, missingTypes);
+          allResults.push(...results);
+          // Get full cached results for source update callback
+          onSourceUpdate?.(sourceId, this.cacheService.getService(word, sourceId) || []);
+        }
+      })();
+
+      fetchPromises.push(fetchPromise);
+    }
+
+    await Promise.all(fetchPromises);
+
+    // Deduplicate across all sources
+    const seen = new Set<string>();
+    return allResults.filter(r => {
+      const key = `${r.type}:${r.word.toLowerCase()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  /**
+   * Get all relationship types supported by enabled services.
+   */
+  getAvailableRelationshipTypes(): RelationshipType[] {
+    const supportedTypes = new Set<RelationshipType>();
+    const enabledSources = this.getEnabledSources();
+
+    for (const source of enabledSources) {
+      let types: RelationshipType[];
+
+      if (isBuiltinSource(source)) {
+        types = BUILTIN_SERVICE_TYPES[source.id];
+      } else if (isAPISource(source)) {
+        const serviceInfo = getAPIServiceInfo(source.config.type);
+        types = serviceInfo.supportedTypes;
+      } else {
+        continue;
+      }
+
+      for (const type of types) {
+        supportedTypes.add(type);
+      }
+    }
+
+    // Return in canonical order
+    return ALL_RELATIONSHIP_TYPES.filter(t => supportedTypes.has(t));
   }
 }

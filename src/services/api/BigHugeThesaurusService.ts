@@ -1,6 +1,6 @@
 import { requestUrl } from "obsidian";
-import { SynonymResult } from "../../types";
-import { SynonymService } from "../SynonymService";
+import { SynonymResult, RelationshipType } from "../../types";
+import { SynonymService, API_SERVICE_INFO } from "../SynonymService";
 
 interface BigHugeThesaurusEntry {
   syn?: string[];
@@ -29,7 +29,8 @@ export class BigHugeThesaurusService implements SynonymService {
     this.apiKey = apiKey;
   }
 
-  async lookup(word: string, maxResults: number): Promise<SynonymResult[]> {
+  async lookup(word: string, maxResults: number, types?: RelationshipType[]): Promise<SynonymResult[]> {
+    const requestedTypes = types || ["synonym", "antonym", "related"];
     const url = `${BASE_URL}/${this.apiKey}/${encodeURIComponent(word)}/json`;
 
     const response = await requestUrl({ url });
@@ -48,7 +49,7 @@ export class BigHugeThesaurusService implements SynonymService {
       if (!entry) continue;
 
       // Add synonyms
-      if (entry.syn) {
+      if (requestedTypes.includes("synonym") && entry.syn) {
         for (const synonym of entry.syn) {
           results.push({
             word: synonym,
@@ -60,7 +61,7 @@ export class BigHugeThesaurusService implements SynonymService {
       }
 
       // Add similar words as synonyms
-      if (entry.sim) {
+      if (requestedTypes.includes("synonym") && entry.sim) {
         for (const similar of entry.sim) {
           results.push({
             word: similar,
@@ -71,8 +72,20 @@ export class BigHugeThesaurusService implements SynonymService {
         }
       }
 
+      // Add antonyms
+      if (requestedTypes.includes("antonym") && entry.ant) {
+        for (const antonym of entry.ant) {
+          results.push({
+            word: antonym,
+            type: "antonym",
+            source: "big-huge-thesaurus",
+            partOfSpeech: pos,
+          });
+        }
+      }
+
       // Add related words
-      if (entry.rel) {
+      if (requestedTypes.includes("related") && entry.rel) {
         for (const related of entry.rel) {
           results.push({
             word: related,
@@ -84,16 +97,20 @@ export class BigHugeThesaurusService implements SynonymService {
       }
     }
 
-    // Deduplicate by word
+    // Deduplicate by word+type
     const seen = new Set<string>();
     const dedupedResults = results.filter((r) => {
-      const key = r.word.toLowerCase();
+      const key = `${r.type}:${r.word.toLowerCase()}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
 
     return dedupedResults.slice(0, maxResults);
+  }
+
+  supportedTypes(): RelationshipType[] {
+    return API_SERVICE_INFO["big-huge-thesaurus"].supportedTypes;
   }
 
   async validate(): Promise<{ valid: boolean; error?: string }> {

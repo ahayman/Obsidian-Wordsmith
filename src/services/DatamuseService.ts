@@ -1,5 +1,5 @@
 import { requestUrl } from "obsidian";
-import { SynonymResult } from "../types";
+import { SynonymResult, RelationshipType } from "../types";
 
 interface DatamuseWord {
   word: string;
@@ -68,21 +68,121 @@ export class DatamuseService {
     }
   }
 
-  async lookup(word: string): Promise<{ synonyms: SynonymResult[]; relatedWords: SynonymResult[] }> {
-    const [synonyms, relatedWords] = await Promise.all([
-      this.getSynonyms(word),
-      this.getRelatedWords(word),
-    ]);
+  async getAntonyms(word: string): Promise<SynonymResult[]> {
+    // rel_ant = antonyms
+    const url = `${DATAMUSE_BASE_URL}?rel_ant=${encodeURIComponent(word)}&max=${this.maxResults}&md=dp`;
 
-    const synonymWords = new Set(synonyms.map((s) => s.word));
-    const filteredRelated = relatedWords.filter((r) => !synonymWords.has(r.word));
+    try {
+      const response = await requestUrl({ url });
+      const data = response.json as DatamuseWord[];
 
-    return { synonyms, relatedWords: filteredRelated };
+      return data.map((item) => this.parseDatamuseWord(item, "antonym"));
+    } catch (error) {
+      console.error("Datamuse antonym lookup failed:", error);
+      return [];
+    }
+  }
+
+  async getHypernyms(word: string): Promise<SynonymResult[]> {
+    // rel_spc = "more specific than" = hypernyms (words that the query is a type of)
+    const url = `${DATAMUSE_BASE_URL}?rel_spc=${encodeURIComponent(word)}&max=${this.maxResults}&md=dp`;
+
+    try {
+      const response = await requestUrl({ url });
+      const data = response.json as DatamuseWord[];
+
+      return data.map((item) => this.parseDatamuseWord(item, "hypernym"));
+    } catch (error) {
+      console.error("Datamuse hypernym lookup failed:", error);
+      return [];
+    }
+  }
+
+  async getHyponyms(word: string): Promise<SynonymResult[]> {
+    // rel_gen = "more general than" = hyponyms (more specific terms under the query)
+    const url = `${DATAMUSE_BASE_URL}?rel_gen=${encodeURIComponent(word)}&max=${this.maxResults}&md=dp`;
+
+    try {
+      const response = await requestUrl({ url });
+      const data = response.json as DatamuseWord[];
+
+      return data.map((item) => this.parseDatamuseWord(item, "hyponym"));
+    } catch (error) {
+      console.error("Datamuse hyponym lookup failed:", error);
+      return [];
+    }
+  }
+
+  async lookup(word: string, types?: RelationshipType[]): Promise<{ synonyms: SynonymResult[]; relatedWords: SynonymResult[] }> {
+    // Default to synonym + related for backward compatibility
+    const requestedTypes = types || ["synonym", "related"];
+
+    const promises: Promise<SynonymResult[]>[] = [];
+    const typeMapping: { type: RelationshipType; promise: Promise<SynonymResult[]> }[] = [];
+
+    if (requestedTypes.includes("synonym")) {
+      const p = this.getSynonyms(word);
+      promises.push(p);
+      typeMapping.push({ type: "synonym", promise: p });
+    }
+    if (requestedTypes.includes("related")) {
+      const p = this.getRelatedWords(word);
+      promises.push(p);
+      typeMapping.push({ type: "related", promise: p });
+    }
+    if (requestedTypes.includes("antonym")) {
+      const p = this.getAntonyms(word);
+      promises.push(p);
+      typeMapping.push({ type: "antonym", promise: p });
+    }
+    if (requestedTypes.includes("hypernym")) {
+      const p = this.getHypernyms(word);
+      promises.push(p);
+      typeMapping.push({ type: "hypernym", promise: p });
+    }
+    if (requestedTypes.includes("hyponym")) {
+      const p = this.getHyponyms(word);
+      promises.push(p);
+      typeMapping.push({ type: "hyponym", promise: p });
+    }
+
+    await Promise.all(promises);
+
+    // Collect results
+    const allResults: SynonymResult[] = [];
+    const synonymWords = new Set<string>();
+
+    for (const mapping of typeMapping) {
+      const results = await mapping.promise;
+      if (mapping.type === "synonym") {
+        results.forEach(r => synonymWords.add(r.word));
+      }
+      allResults.push(...results);
+    }
+
+    // Separate synonyms from other results (for backward compatibility return format)
+    const synonyms = allResults.filter(r => r.type === "synonym");
+    const relatedWords = allResults.filter(r => r.type !== "synonym" && !synonymWords.has(r.word));
+
+    return { synonyms, relatedWords };
+  }
+
+  /**
+   * Lookup specific relationship types and return flat array of results.
+   * Used for lazy loading additional types.
+   */
+  async lookupTypes(word: string, types: RelationshipType[]): Promise<SynonymResult[]> {
+    const { synonyms, relatedWords } = await this.lookup(word, types);
+    return [...synonyms, ...relatedWords];
+  }
+
+  supportedTypes(): RelationshipType[] {
+    return ["synonym", "antonym", "related", "hypernym", "hyponym"];
   }
 
   private parseDatamuseWord(
     item: DatamuseWord,
-    type: "synonym" | "related"
+    type: "synonym" | "antonym" | "related" | "hypernym" | "hyponym"
   ): SynonymResult {
     const result: SynonymResult = {
       word: item.word,

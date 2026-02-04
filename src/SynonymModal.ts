@@ -1,13 +1,23 @@
-import { Modal, Platform, prepareSimpleSearch } from "obsidian";
+import { Modal, Platform, prepareSimpleSearch, setIcon } from "obsidian";
 import {
   SynonymResult,
   WordRange,
   TabMetadata,
   TabState,
+  RelationshipType,
 } from "./types";
 import SynoFinderPlugin from "./main";
 import { replaceWord } from "./utils/wordExtractor";
 import { createServiceIcon } from "./utils/serviceIcons";
+
+// Labels for filter chips
+const TYPE_LABELS: Record<RelationshipType, string> = {
+  synonym: "Synonyms",
+  antonym: "Antonyms",
+  related: "Related",
+  hypernym: "Hypernyms",
+  hyponym: "Hyponyms",
+};
 
 export class SynonymModal extends Modal {
   private plugin: SynoFinderPlugin;
@@ -20,8 +30,15 @@ export class SynonymModal extends Modal {
   private tabResults: Map<string, SynonymResult[]> = new Map();
   private allComplete: boolean = false;
 
+  // Filter state
+  private activeFilters: Set<RelationshipType> = new Set();
+  private availableTypes: RelationshipType[] = [];
+  private loadingTypes: Set<RelationshipType> = new Set();
+  private initialType: RelationshipType;
+
   private inputEl: HTMLInputElement;
   private tabContainerEl: HTMLElement;
+  private filterContainerEl: HTMLElement;
   private resultsContainerEl: HTMLElement;
 
   private activeTabId: string;
@@ -39,13 +56,15 @@ export class SynonymModal extends Modal {
     plugin: SynoFinderPlugin,
     word: string,
     wordRange: WordRange,
-    tabMetadata: TabMetadata[]
+    tabMetadata: TabMetadata[],
+    initialType: RelationshipType = "synonym"
   ) {
     super(plugin.app);
     this.plugin = plugin;
     this.word = word;
     this.wordRange = wordRange;
     this.tabMetadata = tabMetadata;
+    this.initialType = initialType;
 
     // Initialize all tabs as loading with empty results
     for (const tab of tabMetadata) {
@@ -55,6 +74,12 @@ export class SynonymModal extends Modal {
 
     // Set initial active tab to first tab
     this.activeTabId = tabMetadata[0]?.id || "";
+
+    // Get available relationship types from enabled services
+    this.availableTypes = this.plugin.dataService.getAvailableRelationshipTypes();
+
+    // Initialize active filters with the initial type
+    this.activeFilters.add(initialType);
   }
 
   /**
@@ -146,6 +171,10 @@ export class SynonymModal extends Modal {
     this.tabContainerEl = contentEl.createDiv({ cls: "synofinder-tabs" });
     this.renderTabs();
 
+    // Create filter chips row (below tabs)
+    this.filterContainerEl = contentEl.createDiv({ cls: "synofinder-filters" });
+    this.renderFilters();
+
     // Create results container
     this.resultsContainerEl = contentEl.createDiv({ cls: "synofinder-results" });
     this.updateFilteredResults();
@@ -231,7 +260,7 @@ export class SynonymModal extends Modal {
 
       // Show count for results, spinner for loading
       if (state === "results") {
-        const count = this.getResultsForTab(tab.id).length;
+        const count = this.getFilteredResultCountForTab(tab.id);
         tabEl.createSpan({
           text: `(${count})`,
           cls: "synofinder-tab-count",
@@ -263,15 +292,143 @@ export class SynonymModal extends Modal {
     }
   }
 
+  /**
+   * Get filtered result count for a tab (applies type filters).
+   */
+  private getFilteredResultCountForTab(tabId: string): number {
+    const results = this.getResultsForTab(tabId);
+    // Spelling tab doesn't use relationship type filters
+    if (tabId === "spelling") {
+      return results.length;
+    }
+    return results.filter(r => this.activeFilters.has(r.type as RelationshipType)).length;
+  }
+
+  /**
+   * Render filter chips row.
+   * Hidden when spelling tab is active (spelling is not a relationship type).
+   */
+  private renderFilters(): void {
+    this.filterContainerEl.empty();
+
+    // Hide filters when spelling tab is active
+    if (this.activeTabId === "spelling") {
+      this.filterContainerEl.addClass("synofinder-hidden");
+      return;
+    }
+    this.filterContainerEl.removeClass("synofinder-hidden");
+
+    for (const type of this.availableTypes) {
+      const isActive = this.activeFilters.has(type);
+      const isLoading = this.loadingTypes.has(type);
+
+      const chipEl = this.filterContainerEl.createDiv({
+        cls: `synofinder-filter-chip ${isActive ? "synofinder-filter-active" : ""} ${isLoading ? "synofinder-filter-loading" : ""}`,
+      });
+
+      // Checkmark icon when active
+      if (isActive && !isLoading) {
+        const checkIcon = chipEl.createSpan({ cls: "synofinder-filter-check" });
+        setIcon(checkIcon, "check");
+      }
+
+      // Spinner when loading
+      if (isLoading) {
+        chipEl.createSpan({
+          cls: "synofinder-filter-spinner synofinder-spinner",
+          text: "⟳",
+        });
+      }
+
+      // Label
+      chipEl.createSpan({
+        cls: "synofinder-filter-label",
+        text: TYPE_LABELS[type],
+      });
+
+      chipEl.setAttribute("title", `Toggle ${TYPE_LABELS[type].toLowerCase()}`);
+
+      // Click handler
+      chipEl.addEventListener("click", () => {
+        this.onFilterToggle(type);
+      });
+    }
+  }
+
+  /**
+   * Handle filter chip toggle.
+   */
+  private onFilterToggle(type: RelationshipType): void {
+    if (this.activeFilters.has(type)) {
+      // Don't allow unchecking all filters
+      if (this.activeFilters.size <= 1) {
+        return;
+      }
+      this.activeFilters.delete(type);
+    } else {
+      this.activeFilters.add(type);
+      // Check if we need to lazy load this type
+      void this.fetchMissingType(type);
+    }
+
+    this.updateFilteredResults();
+    this.renderFilters();
+    this.renderTabs(); // Update counts
+    this.renderResults();
+  }
+
+  /**
+   * Lazy load a type if not already fetched from services.
+   */
+  private async fetchMissingType(type: RelationshipType): Promise<void> {
+    // Mark as loading
+    this.loadingTypes.add(type);
+    this.renderFilters();
+
+    try {
+      await this.plugin.dataService.fetchAdditionalTypes(
+        this.word,
+        [type],
+        (sourceId, results) => {
+          // Update results for this source
+          this.tabResults.set(sourceId, results);
+          // Re-render if this is the active tab
+          if (sourceId === this.activeTabId) {
+            this.updateFilteredResults();
+            this.renderResults();
+          }
+          // Update tab counts
+          this.renderTabs();
+        }
+      );
+    } finally {
+      this.loadingTypes.delete(type);
+      this.renderFilters();
+    }
+  }
+
   private updateFilteredResults(): void {
     const query = this.inputEl?.value?.trim().toLowerCase() || "";
     const results = this.getResultsForTab(this.activeTabId);
 
+    // First apply type filter (unless spelling tab)
+    let typeFiltered: SynonymResult[];
+    if (this.activeTabId === "spelling") {
+      // Spelling tab shows all results - no relationship type filtering
+      typeFiltered = results;
+    } else {
+      // Apply relationship type filter
+      typeFiltered = results.filter(r =>
+        this.activeFilters.has(r.type as RelationshipType)
+      );
+    }
+
+    // Then apply search filter
     if (!query) {
-      this.filteredResults = results;
+      this.filteredResults = typeFiltered;
     } else {
       const search = prepareSimpleSearch(query);
-      this.filteredResults = results.filter((r) => {
+      this.filteredResults = typeFiltered.filter((r) => {
         const match = search(r.word);
         return match !== null;
       });
@@ -363,12 +520,15 @@ export class SynonymModal extends Modal {
 
     mainRow.createSpan({ cls: "synofinder-word", text: item.word });
 
-    const badgeMap = {
+    const badgeMap: Record<string, { cls: string; text: string }> = {
       synonym: { cls: "synofinder-badge-syn", text: "Syn" },
+      antonym: { cls: "synofinder-badge-ant", text: "Ant" },
       related: { cls: "synofinder-badge-rel", text: "Rel" },
+      hypernym: { cls: "synofinder-badge-hyper", text: "Hyper" },
+      hyponym: { cls: "synofinder-badge-hypo", text: "Hypo" },
       spelling: { cls: "synofinder-badge-spell", text: "Spell" },
-    } as const;
-    const badge = badgeMap[item.type] ?? badgeMap["related"];
+    };
+    const badge = badgeMap[item.type] || badgeMap["related"]!;
     mainRow.createSpan({ cls: `synofinder-badge ${badge.cls}`, text: badge.text });
 
     if (item.partOfSpeech) {
@@ -547,6 +707,7 @@ export class SynonymModal extends Modal {
       this.selectedIndex = 0;
       this.updateFilteredResults();
       this.renderTabs();
+      this.renderFilters(); // Update filter visibility
       this.renderResults();
 
       // Prepare for slide-in (start off-screen)

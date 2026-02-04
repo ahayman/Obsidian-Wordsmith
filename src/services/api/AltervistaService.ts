@@ -1,6 +1,6 @@
 import { requestUrl } from "obsidian";
-import { SynonymResult } from "../../types";
-import { SynonymService } from "../SynonymService";
+import { SynonymResult, RelationshipType } from "../../types";
+import { SynonymService, API_SERVICE_INFO } from "../SynonymService";
 
 interface AltervistaList {
   category: string;
@@ -28,7 +28,8 @@ export class AltervistaService implements SynonymService {
     this.apiKey = apiKey;
   }
 
-  async lookup(word: string, maxResults: number): Promise<SynonymResult[]> {
+  async lookup(word: string, maxResults: number, types?: RelationshipType[]): Promise<SynonymResult[]> {
+    const requestedTypes = types || ["synonym", "antonym"];
     const url = `${BASE_URL}?word=${encodeURIComponent(word)}&language=en_US&key=${this.apiKey}&output=json`;
 
     const response = await requestUrl({ url });
@@ -49,33 +50,56 @@ export class AltervistaService implements SynonymService {
         const entries = synonymsStr.split("|").map((s) => s.trim());
 
         for (const entry of entries) {
-          // Skip if it contains parentheses (annotations like "similar term")
-          if (entry.includes("(") || entry.includes(")")) continue;
-          // Skip antonyms
-          if (entry.toLowerCase().includes("antonym")) continue;
           // Skip empty entries
           if (!entry) continue;
 
-          results.push({
-            word: entry,
-            type: "synonym",
-            source: "altervista",
-            partOfSpeech,
-          });
+          // Check for antonym annotation
+          const isAntonym = entry.toLowerCase().includes("(antonym)");
+
+          if (isAntonym) {
+            if (requestedTypes.includes("antonym")) {
+              // Extract word from annotation like "word (antonym)"
+              const cleanWord = entry.replace(/\s*\(antonym\)\s*/i, "").trim();
+              if (cleanWord) {
+                results.push({
+                  word: cleanWord,
+                  type: "antonym",
+                  source: "altervista",
+                  partOfSpeech,
+                });
+              }
+            }
+          } else {
+            // Skip other annotations (similar term, etc.) but keep plain words
+            if (entry.includes("(") || entry.includes(")")) continue;
+
+            if (requestedTypes.includes("synonym")) {
+              results.push({
+                word: entry,
+                type: "synonym",
+                source: "altervista",
+                partOfSpeech,
+              });
+            }
+          }
         }
       }
     }
 
-    // Deduplicate by word
+    // Deduplicate by word+type
     const seen = new Set<string>();
     const dedupedResults = results.filter((r) => {
-      const key = r.word.toLowerCase();
+      const key = `${r.type}:${r.word.toLowerCase()}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
 
     return dedupedResults.slice(0, maxResults);
+  }
+
+  supportedTypes(): RelationshipType[] {
+    return API_SERVICE_INFO["altervista"].supportedTypes;
   }
 
   private parseCategory(category: string | undefined): string | undefined {

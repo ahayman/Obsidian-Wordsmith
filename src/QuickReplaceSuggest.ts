@@ -1,5 +1,5 @@
 import { App, Editor, Notice } from "obsidian";
-import { SynonymResult, WordRange } from "./types";
+import { SynonymResult, WordRange, RelationshipType } from "./types";
 import { DataService } from "./services/DataService";
 import { getWordUnderCursor, replaceWord } from "./utils/wordExtractor";
 
@@ -26,7 +26,7 @@ export class QuickReplaceSuggest {
     this.boundClickOutsideHandler = this.handleClickOutside.bind(this);
   }
 
-  async triggerForWord(editor: Editor): Promise<void> {
+  async triggerForWord(editor: Editor, type: RelationshipType = "synonym"): Promise<void> {
     const extraction = getWordUnderCursor(editor);
     if (!extraction) {
       new Notice("No word found under cursor");
@@ -39,10 +39,10 @@ export class QuickReplaceSuggest {
       editor,
     };
 
-    // Fetch suggestions
-    const suggestions = await this.dataService.getQuickReplaceSuggestions(extraction.word);
+    // Fetch suggestions for the specified type
+    const suggestions = await this.dataService.getQuickReplaceSuggestions(extraction.word, type);
     if (suggestions.length === 0) {
-      new Notice("No suggestions found");
+      new Notice(`No ${type === "antonym" ? "antonyms" : "suggestions"} found`);
       this.context = null;
       return;
     }
@@ -122,6 +122,12 @@ export class QuickReplaceSuggest {
     switch (type) {
       case "synonym":
         return { cls: "synofinder-badge-syn", text: "Syn" };
+      case "antonym":
+        return { cls: "synofinder-badge-ant", text: "Ant" };
+      case "hypernym":
+        return { cls: "synofinder-badge-hyper", text: "Hyper" };
+      case "hyponym":
+        return { cls: "synofinder-badge-hypo", text: "Hypo" };
       case "spelling":
         return { cls: "synofinder-badge-spell", text: "Spell" };
       case "related":

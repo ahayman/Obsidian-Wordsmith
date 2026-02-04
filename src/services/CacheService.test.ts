@@ -1,12 +1,19 @@
 import { CacheService } from "./CacheService";
-import { LookupCache, SynonymResult } from "../types";
+import { LookupCache, SynonymResult, ServiceCacheData } from "../types";
 
 function createMockResults(word: string): SynonymResult[] {
   return [{ word: `${word}-synonym`, type: "synonym", source: "wordnet" }];
 }
 
+function createMockServiceData(word: string): ServiceCacheData {
+  return {
+    results: createMockResults(word),
+    fetchedTypes: ["synonym"],
+  };
+}
+
 function createEmptyCache(): LookupCache {
-  return { entries: {}, version: 2 };
+  return { entries: {}, version: 3 };
 }
 
 describe("CacheService", () => {
@@ -53,15 +60,19 @@ describe("CacheService", () => {
       expect(cache.size).toBe(1); // Single word entry
     });
 
-    it("should update existing service results", () => {
+    it("should merge new results with existing service results", () => {
       const cache = new CacheService(createEmptyCache(), 100);
       const results1 = createMockResults("hello1");
-      const results2 = createMockResults("hello2");
+      const results2: SynonymResult[] = [{ word: "hello2-antonym", type: "antonym", source: "wordnet" }];
 
-      cache.setService("hello", "local", results1);
-      cache.setService("hello", "local", results2);
+      cache.setService("hello", "local", results1, ["synonym"]);
+      cache.setService("hello", "local", results2, ["antonym"]);
 
-      expect(cache.getService("hello", "local")).toEqual(results2);
+      const cached = cache.getService("hello", "local");
+      // Should have both results merged
+      expect(cached).toHaveLength(2);
+      expect(cached).toContainEqual({ word: "hello1-synonym", type: "synonym", source: "wordnet" });
+      expect(cached).toContainEqual({ word: "hello2-antonym", type: "antonym", source: "wordnet" });
     });
   });
 
@@ -261,14 +272,16 @@ describe("CacheService", () => {
       const cache = new CacheService(createEmptyCache(), 100);
       const results = createMockResults("hello");
 
-      cache.setService("hello", "local", results);
+      cache.setService("hello", "local", results, ["synonym"]);
 
       const serialized = cache.toCache();
 
-      expect(serialized.version).toBe(2);
+      expect(serialized.version).toBe(3);
       expect(serialized.entries["hello"]).toBeDefined();
       expect(serialized.entries["hello"]!.word).toBe("hello");
-      expect(serialized.entries["hello"]!.services["local"]).toEqual(results);
+      const serviceData = serialized.entries["hello"]!.services["local"] as ServiceCacheData;
+      expect(serviceData.results).toEqual(results);
+      expect(serviceData.fetchedTypes).toEqual(["synonym"]);
     });
   });
 
@@ -278,16 +291,16 @@ describe("CacheService", () => {
         entries: {
           hello: {
             word: "hello",
-            services: { local: createMockResults("hello") },
+            services: { local: createMockServiceData("hello") },
             lastAccessed: Date.now(),
           },
           world: {
             word: "world",
-            services: { local: createMockResults("world"), datamuse: createMockResults("world") },
+            services: { local: createMockServiceData("world"), datamuse: createMockServiceData("world") },
             lastAccessed: Date.now(),
           },
         },
-        version: 2,
+        version: 3,
       };
 
       const cache = new CacheService(existingCache, 100);

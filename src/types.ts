@@ -1,5 +1,9 @@
 import { Editor, EditorPosition } from "obsidian";
 
+// Relationship types for word lookups
+export type RelationshipType = "synonym" | "antonym" | "related" | "hypernym" | "hyponym";
+export const ALL_RELATIONSHIP_TYPES: RelationshipType[] = ["synonym", "antonym", "related", "hypernym", "hyponym"];
+
 // Built-in source identifiers
 export type BuiltinTabId = "local" | "datamuse";
 
@@ -38,7 +42,7 @@ export interface APIServiceConfig {
 
 export interface SynonymResult {
   word: string;
-  type: "synonym" | "related" | "spelling";
+  type: "synonym" | "antonym" | "related" | "hypernym" | "hyponym" | "spelling";
   source: SynonymSource;
   partOfSpeech?: string;
   definition?: string;
@@ -76,9 +80,14 @@ export type SourceConfig =
   | { kind: "api"; id: string; config: APIServiceConfig };
 
 // Cache types - per-service caching
+export interface ServiceCacheData {
+  results: SynonymResult[];
+  fetchedTypes: RelationshipType[];  // Which relationship types were fetched
+}
+
 export interface CacheEntry {
   word: string;                              // Normalized to lowercase
-  services: Record<string, SynonymResult[]>; // Per-service results
+  services: Record<string, ServiceCacheData>; // Per-service results with metadata
   lastAccessed: number;                      // Unix timestamp for LRU
 }
 

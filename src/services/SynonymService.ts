@@ -1,11 +1,12 @@
-import { SynonymResult, APIServiceType } from "../types";
+import { SynonymResult, APIServiceType, RelationshipType } from "../types";
 
 export interface SynonymService {
   readonly id: string;
   readonly name: string;
   readonly description: string;
-  lookup(word: string, maxResults: number): Promise<SynonymResult[]>;
+  lookup(word: string, maxResults: number, types?: RelationshipType[]): Promise<SynonymResult[]>;
   validate(): Promise<{ valid: boolean; error?: string }>;
+  supportedTypes(): RelationshipType[];
 }
 
 export interface APIServiceInfo {
@@ -15,6 +16,7 @@ export interface APIServiceInfo {
   requiresKey: boolean;
   registrationUrl: string;
   registrationInstructions: string;
+  supportedTypes: RelationshipType[];
 }
 
 export const API_SERVICE_INFO: Record<APIServiceType, APIServiceInfo> = {
@@ -26,6 +28,7 @@ export const API_SERVICE_INFO: Record<APIServiceType, APIServiceInfo> = {
     registrationUrl: "https://dictionaryapi.com/register/index",
     registrationInstructions:
       "Create a free account and request access to the Collegiate Thesaurus API. Keys are emailed after registration.",
+    supportedTypes: ["synonym", "antonym"],
   },
   "big-huge-thesaurus": {
     type: "big-huge-thesaurus",
@@ -35,6 +38,7 @@ export const API_SERVICE_INFO: Record<APIServiceType, APIServiceInfo> = {
     registrationUrl: "https://words.bighugelabs.com/account/getkey",
     registrationInstructions:
       "Create an account to get your API key. Free tier available with usage limits.",
+    supportedTypes: ["synonym", "antonym", "related"],
   },
   "words-api": {
     type: "words-api",
@@ -44,6 +48,7 @@ export const API_SERVICE_INFO: Record<APIServiceType, APIServiceInfo> = {
     registrationUrl: "https://rapidapi.com/dpventures/api/wordsapi",
     registrationInstructions:
       'Sign up for RapidAPI, subscribe to WordsAPI (free tier: 2,500 requests/day). Your API key is shown in the "X-RapidAPI-Key" header on the API page.',
+    supportedTypes: ["synonym", "antonym", "related", "hypernym", "hyponym"],
   },
   "api-ninjas": {
     type: "api-ninjas",
@@ -53,6 +58,7 @@ export const API_SERVICE_INFO: Record<APIServiceType, APIServiceInfo> = {
     registrationUrl: "https://api-ninjas.com/register",
     registrationInstructions:
       "Create a free account. Your API key is available on your profile page after signing in.",
+    supportedTypes: ["synonym", "antonym"],
   },
   altervista: {
     type: "altervista",
@@ -62,6 +68,7 @@ export const API_SERVICE_INFO: Record<APIServiceType, APIServiceInfo> = {
     registrationUrl: "https://thesaurus.altervista.org/mykey",
     registrationInstructions:
       "Register for a free account to receive your API key. Supports multiple languages.",
+    supportedTypes: ["synonym", "antonym"],
   },
   "free-dictionary": {
     type: "free-dictionary",
@@ -70,7 +77,15 @@ export const API_SERVICE_INFO: Record<APIServiceType, APIServiceInfo> = {
     requiresKey: false,
     registrationUrl: "",
     registrationInstructions: "No API key required. This service is free and open.",
+    supportedTypes: ["synonym", "antonym"],
   },
+};
+
+// Supported types for built-in services
+import { BuiltinTabId } from "../types";
+export const BUILTIN_SERVICE_TYPES: Record<BuiltinTabId, RelationshipType[]> = {
+  local: ["synonym", "related"],  // WordNet + Moby have synonyms and related
+  datamuse: ["synonym", "antonym", "related", "hypernym", "hyponym"],
 };
 
 export function getAPIServiceInfo(type: APIServiceType): APIServiceInfo {

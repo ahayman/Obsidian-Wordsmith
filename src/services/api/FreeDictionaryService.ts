@@ -1,6 +1,6 @@
 import { requestUrl } from "obsidian";
-import { SynonymResult } from "../../types";
-import { SynonymService } from "../SynonymService";
+import { SynonymResult, RelationshipType } from "../../types";
+import { SynonymService, API_SERVICE_INFO } from "../SynonymService";
 
 interface FreeDictionaryMeaning {
   partOfSpeech: string;
@@ -29,7 +29,8 @@ export class FreeDictionaryService implements SynonymService {
     this.id = id;
   }
 
-  async lookup(word: string, maxResults: number): Promise<SynonymResult[]> {
+  async lookup(word: string, maxResults: number, types?: RelationshipType[]): Promise<SynonymResult[]> {
+    const requestedTypes = types || ["synonym", "antonym"];
     const url = `${BASE_URL}/${encodeURIComponent(word)}`;
 
     const response = await requestUrl({ url });
@@ -40,7 +41,7 @@ export class FreeDictionaryService implements SynonymService {
     for (const entry of data) {
       for (const meaning of entry.meanings) {
         // Top-level synonyms for this part of speech
-        if (meaning.synonyms) {
+        if (requestedTypes.includes("synonym") && meaning.synonyms) {
           for (const synonym of meaning.synonyms) {
             results.push({
               word: synonym,
@@ -51,9 +52,21 @@ export class FreeDictionaryService implements SynonymService {
           }
         }
 
-        // Synonyms from definitions
+        // Top-level antonyms for this part of speech
+        if (requestedTypes.includes("antonym") && meaning.antonyms) {
+          for (const antonym of meaning.antonyms) {
+            results.push({
+              word: antonym,
+              type: "antonym",
+              source: "free-dictionary",
+              partOfSpeech: meaning.partOfSpeech,
+            });
+          }
+        }
+
+        // Synonyms and antonyms from definitions
         for (const def of meaning.definitions) {
-          if (def.synonyms) {
+          if (requestedTypes.includes("synonym") && def.synonyms) {
             for (const synonym of def.synonyms) {
               results.push({
                 word: synonym,
@@ -64,20 +77,36 @@ export class FreeDictionaryService implements SynonymService {
               });
             }
           }
+
+          if (requestedTypes.includes("antonym") && def.antonyms) {
+            for (const antonym of def.antonyms) {
+              results.push({
+                word: antonym,
+                type: "antonym",
+                source: "free-dictionary",
+                partOfSpeech: meaning.partOfSpeech,
+                definition: def.definition,
+              });
+            }
+          }
         }
       }
     }
 
-    // Deduplicate by word
+    // Deduplicate by word+type
     const seen = new Set<string>();
     const dedupedResults = results.filter((r) => {
-      const key = r.word.toLowerCase();
+      const key = `${r.type}:${r.word.toLowerCase()}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
 
     return dedupedResults.slice(0, maxResults);
+  }
+
+  supportedTypes(): RelationshipType[] {
+    return API_SERVICE_INFO["free-dictionary"].supportedTypes;
   }
 
   async validate(): Promise<{ valid: boolean; error?: string }> {

@@ -7,10 +7,20 @@ import {
   isAPISource,
   isSourceEnabled,
   APIServiceConfig,
+  RelationshipType,
 } from "./types";
 import { AddAPIServiceModal } from "./AddAPIServiceModal";
-import { getAPIServiceInfo } from "./services/SynonymService";
+import { getAPIServiceInfo, BUILTIN_SERVICE_TYPES } from "./services/SynonymService";
 import { createServiceIcon } from "./utils/serviceIcons";
+
+// Labels for displaying supported types
+const TYPE_DISPLAY_LABELS: Record<RelationshipType, string> = {
+  synonym: "Synonyms",
+  antonym: "Antonyms",
+  related: "Related",
+  hypernym: "Hypernyms",
+  hyponym: "Hyponyms",
+};
 
 export class SynonymSettingsTab extends PluginSettingTab {
   plugin: SynoFinderPlugin;
@@ -152,6 +162,11 @@ export class SynonymSettingsTab extends PluginSettingTab {
         nameEl.setText(TAB_LABELS[source.id]);
         const descEl = contentEl.createDiv({ cls: "synofinder-source-description" });
         descEl.setText(TAB_DESCRIPTIONS[source.id]);
+
+        // Show supported types
+        const supportedTypes = BUILTIN_SERVICE_TYPES[source.id];
+        const typesEl = contentEl.createDiv({ cls: "synofinder-source-types" });
+        typesEl.setText(`Supports: ${this.formatSupportedTypes(supportedTypes)}`);
       } else if (isAPISource(source)) {
         const nameRow = contentEl.createDiv({ cls: "synofinder-source-name-row" });
         const keyBadge = nameRow.createSpan({ cls: "synofinder-key-badge" });
@@ -162,6 +177,10 @@ export class SynonymSettingsTab extends PluginSettingTab {
 
         const descEl = contentEl.createDiv({ cls: "synofinder-source-description" });
         descEl.setText(serviceInfo.description);
+
+        // Show supported types
+        const typesEl = contentEl.createDiv({ cls: "synofinder-source-types" });
+        typesEl.setText(`Supports: ${this.formatSupportedTypes(serviceInfo.supportedTypes)}`);
       }
 
       // Actions container (delete button for API services)
@@ -402,5 +421,12 @@ export class SynonymSettingsTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           })
       );
+  }
+
+  /**
+   * Format an array of relationship types into a human-readable string.
+   */
+  private formatSupportedTypes(types: RelationshipType[]): string {
+    return types.map(t => TYPE_DISPLAY_LABELS[t]).join(", ");
   }
 }

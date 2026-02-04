@@ -103,6 +103,80 @@
   font-size: 0.85em;
 }
 
+/* Filter Chips Row */
+.synofinder-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 0 0 8px 0;
+  margin-bottom: 8px;
+}
+
+.synofinder-filter-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 0.8em;
+  cursor: pointer;
+  color: var(--text-muted);
+  background-color: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  transition: all 0.15s ease;
+}
+
+.synofinder-filter-chip:hover {
+  background-color: var(--background-modifier-hover);
+  border-color: var(--text-muted);
+}
+
+.synofinder-filter-chip.synofinder-filter-active {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+}
+
+.synofinder-filter-chip.synofinder-filter-active:hover {
+  background-color: var(--interactive-accent-hover);
+  border-color: var(--interactive-accent-hover);
+}
+
+.synofinder-filter-chip.synofinder-filter-loading {
+  opacity: 0.7;
+}
+
+.synofinder-filter-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.synofinder-filter-check svg {
+  width: 12px;
+  height: 12px;
+}
+
+.synofinder-filter-spinner {
+  font-size: 0.9em;
+}
+
+.synofinder-filter-label {
+  white-space: nowrap;
+}
+
+/* Mobile: smaller filter chips */
+@media (max-width: 480px) {
+  .synofinder-filters {
+    gap: 4px;
+  }
+
+  .synofinder-filter-chip {
+    padding: 3px 8px;
+    font-size: 0.75em;
+  }
+}
+
 /* Results Container */
 .synofinder-results {
   flex: 1;
@@ -234,6 +308,21 @@
 .synofinder-badge-spell {
   background-color: rgba(var(--color-yellow-rgb), 0.3);
   color: var(--color-yellow);
+}
+
+.synofinder-badge-ant {
+  background-color: rgba(var(--color-red-rgb), 0.2);
+  color: var(--color-red);
+}
+
+.synofinder-badge-hyper {
+  background-color: rgba(var(--color-purple-rgb), 0.2);
+  color: var(--color-purple);
+}
+
+.synofinder-badge-hypo {
+  background-color: rgba(var(--color-cyan-rgb), 0.2);
+  color: var(--color-cyan);
 }
 
 .synofinder-pos {
@@ -391,6 +480,13 @@
   font-size: 0.85em;
   color: var(--text-muted);
   margin-top: 2px;
+}
+
+.synofinder-source-types {
+  font-size: 0.75em;
+  color: var(--text-faint);
+  margin-top: 4px;
+  font-style: italic;
 }
 
 .synofinder-source-toggle {
