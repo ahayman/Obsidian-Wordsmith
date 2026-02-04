@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ObsidianSynoFinder is an Obsidian plugin that provides synonym and definition lookup functionality for words. This plugin uses TypeScript and yarn for package management.
+Wordsmith is an Obsidian plugin that provides synonym and definition lookup functionality for words. This plugin uses TypeScript and yarn for package management.
 
 ## Build Commands
 

@@ -1,16 +1,16 @@
-/* SynoFinder Modal Styles */
+/* Wordsmith Modal Styles */
 
-.synofinder-modal {
+.wordsmith-modal {
   display: flex;
   flex-direction: column;
   max-height: 70vh;
 }
 
-.synofinder-input-container {
+.wordsmith-input-container {
   padding: 0 0 8px 0;
 }
 
-.synofinder-input {
+.wordsmith-input {
   width: 100%;
   padding: 10px 12px;
   font-size: 1em;
@@ -20,14 +20,14 @@
   color: var(--text-normal);
 }
 
-.synofinder-input:focus {
+.wordsmith-input:focus {
   outline: none;
   border-color: var(--interactive-accent);
   box-shadow: 0 0 0 2px rgba(var(--interactive-accent-rgb), 0.2);
 }
 
 /* Tab Bar */
-.synofinder-tabs {
+.wordsmith-tabs {
   display: flex;
   gap: 4px;
   padding: 0 0 8px 0;
@@ -36,7 +36,7 @@
   overflow: hidden;
 }
 
-.synofinder-tab {
+.wordsmith-tab {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -53,58 +53,58 @@
 
 /* Mobile: smaller tabs */
 @media (max-width: 480px) {
-  .synofinder-tab {
+  .wordsmith-tab {
     padding: 5px 8px;
     gap: 3px;
   }
 
-  .synofinder-tab .synofinder-service-icon {
+  .wordsmith-tab .wordsmith-service-icon {
     width: 14px !important;
     height: 14px !important;
   }
 
-  .synofinder-tab-count {
+  .wordsmith-tab-count {
     font-size: 0.75em;
   }
 }
 
-.synofinder-tab:hover {
+.wordsmith-tab:hover {
   background-color: var(--background-modifier-hover);
   color: var(--text-normal);
 }
 
-.synofinder-tab-active {
+.wordsmith-tab-active {
   background-color: var(--interactive-accent);
   color: var(--text-on-accent);
 }
 
-.synofinder-tab-active:hover {
+.wordsmith-tab-active:hover {
   background-color: var(--interactive-accent-hover);
   color: var(--text-on-accent);
 }
 
 /* Tab count (shown after icon) */
-.synofinder-tab-count {
+.wordsmith-tab-count {
   font-size: 0.8em;
   color: inherit;
   white-space: nowrap;
 }
 
 /* Grayed Tab State */
-.synofinder-tab-grayed {
+.wordsmith-tab-grayed {
   opacity: 0.4;
   cursor: not-allowed;
   pointer-events: none;
 }
 
 /* Loading Tab State */
-.synofinder-tab-loading .synofinder-tab-spinner {
+.wordsmith-tab-loading .wordsmith-tab-spinner {
   flex-shrink: 0;
   font-size: 0.85em;
 }
 
 /* Filter Chips Row */
-.synofinder-filters {
+.wordsmith-filters {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
@@ -112,7 +112,7 @@
   margin-bottom: 8px;
 }
 
-.synofinder-filter-chip {
+.wordsmith-filter-chip {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -126,59 +126,59 @@
   transition: all 0.15s ease;
 }
 
-.synofinder-filter-chip:hover {
+.wordsmith-filter-chip:hover {
   background-color: var(--background-modifier-hover);
   border-color: var(--text-muted);
 }
 
-.synofinder-filter-chip.synofinder-filter-active {
+.wordsmith-filter-chip.wordsmith-filter-active {
   background-color: var(--interactive-accent);
   color: var(--text-on-accent);
   border-color: var(--interactive-accent);
 }
 
-.synofinder-filter-chip.synofinder-filter-active:hover {
+.wordsmith-filter-chip.wordsmith-filter-active:hover {
   background-color: var(--interactive-accent-hover);
   border-color: var(--interactive-accent-hover);
 }
 
-.synofinder-filter-chip.synofinder-filter-loading {
+.wordsmith-filter-chip.wordsmith-filter-loading {
   opacity: 0.7;
 }
 
-.synofinder-filter-check {
+.wordsmith-filter-check {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.synofinder-filter-check svg {
+.wordsmith-filter-check svg {
   width: 12px;
   height: 12px;
 }
 
-.synofinder-filter-spinner {
+.wordsmith-filter-spinner {
   font-size: 0.9em;
 }
 
-.synofinder-filter-label {
+.wordsmith-filter-label {
   white-space: nowrap;
 }
 
 /* Mobile: smaller filter chips */
 @media (max-width: 480px) {
-  .synofinder-filters {
+  .wordsmith-filters {
     gap: 4px;
   }
 
-  .synofinder-filter-chip {
+  .wordsmith-filter-chip {
     padding: 3px 8px;
     font-size: 0.75em;
   }
 }
 
 /* Results Container */
-.synofinder-results {
+.wordsmith-results {
   flex: 1;
   overflow-y: auto;
   min-height: 200px;
@@ -187,29 +187,29 @@
 }
 
 /* Slide animations for tab switching */
-.synofinder-slide-out-left {
+.wordsmith-slide-out-left {
   transform: translateX(-30%);
   opacity: 0;
 }
 
-.synofinder-slide-out-right {
+.wordsmith-slide-out-right {
   transform: translateX(30%);
   opacity: 0;
 }
 
-.synofinder-slide-in-left {
+.wordsmith-slide-in-left {
   transform: translateX(-30%);
   opacity: 0;
   transition: none;
 }
 
-.synofinder-slide-in-right {
+.wordsmith-slide-in-right {
   transform: translateX(30%);
   opacity: 0;
   transition: none;
 }
 
-.synofinder-empty {
+.wordsmith-empty {
   padding: 20px;
   text-align: center;
   color: var(--text-muted);
@@ -217,7 +217,7 @@
 }
 
 /* Loading Results Container */
-.synofinder-loading {
+.wordsmith-loading {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -226,68 +226,68 @@
   color: var(--text-muted);
 }
 
-.synofinder-loading .synofinder-spinner {
+.wordsmith-loading .wordsmith-spinner {
   font-size: 1.5em;
 }
 
-.synofinder-loading-text {
+.wordsmith-loading-text {
   margin-top: 12px;
   font-size: 0.9em;
 }
 
-.synofinder-no-results {
+.wordsmith-no-results {
   padding: 40px 20px;
   text-align: center;
 }
 
-.synofinder-no-results-title {
+.wordsmith-no-results-title {
   font-size: 1.2em;
   font-weight: 600;
   color: var(--text-normal);
   margin-bottom: 8px;
 }
 
-.synofinder-no-results-desc {
+.wordsmith-no-results-desc {
   font-size: 0.9em;
   color: var(--text-muted);
 }
 
 /* Suggestion Items */
-.synofinder-suggestion {
+.wordsmith-suggestion {
   padding: 8px 12px;
   cursor: pointer;
   border-radius: 4px;
   margin-bottom: 2px;
 }
 
-.synofinder-suggestion:hover,
-.synofinder-suggestion.is-selected {
+.wordsmith-suggestion:hover,
+.wordsmith-suggestion.is-selected {
   background-color: var(--background-modifier-hover);
 }
 
-.synofinder-suggestion.is-selected {
+.wordsmith-suggestion.is-selected {
   background-color: var(--background-secondary);
 }
 
-.synofinder-suggestion-content {
+.wordsmith-suggestion-content {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.synofinder-suggestion-main {
+.wordsmith-suggestion-main {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.synofinder-word {
+.wordsmith-word {
   font-weight: 600;
   font-size: 1em;
 }
 
-.synofinder-badge {
+.wordsmith-badge {
   font-size: 0.7em;
   padding: 2px 6px;
   border-radius: 4px;
@@ -295,43 +295,43 @@
   text-transform: uppercase;
 }
 
-.synofinder-badge-syn {
+.wordsmith-badge-syn {
   background-color: var(--interactive-accent);
   color: var(--text-on-accent);
 }
 
-.synofinder-badge-rel {
+.wordsmith-badge-rel {
   background-color: var(--background-modifier-border);
   color: var(--text-muted);
 }
 
-.synofinder-badge-spell {
+.wordsmith-badge-spell {
   background-color: rgba(var(--color-yellow-rgb), 0.3);
   color: var(--color-yellow);
 }
 
-.synofinder-badge-ant {
+.wordsmith-badge-ant {
   background-color: rgba(var(--color-red-rgb), 0.2);
   color: var(--color-red);
 }
 
-.synofinder-badge-hyper {
+.wordsmith-badge-hyper {
   background-color: rgba(var(--color-purple-rgb), 0.2);
   color: var(--color-purple);
 }
 
-.synofinder-badge-hypo {
+.wordsmith-badge-hypo {
   background-color: rgba(var(--color-cyan-rgb), 0.2);
   color: var(--color-cyan);
 }
 
-.synofinder-pos {
+.wordsmith-pos {
   font-size: 0.8em;
   color: var(--text-muted);
   font-style: italic;
 }
 
-.synofinder-source {
+.wordsmith-source {
   font-size: 0.65em;
   padding: 1px 4px;
   border-radius: 3px;
@@ -340,27 +340,27 @@
   margin-left: auto;
 }
 
-.synofinder-source-wordnet {
+.wordsmith-source-wordnet {
   background-color: rgba(var(--color-blue-rgb), 0.2);
   color: var(--color-blue);
 }
 
-.synofinder-source-moby {
+.wordsmith-source-moby {
   background-color: rgba(var(--color-green-rgb), 0.2);
   color: var(--color-green);
 }
 
-.synofinder-source-datamuse {
+.wordsmith-source-datamuse {
   background-color: rgba(var(--color-orange-rgb), 0.2);
   color: var(--color-orange);
 }
 
-.synofinder-source-nspell {
+.wordsmith-source-nspell {
   background-color: rgba(var(--color-cyan-rgb), 0.2);
   color: var(--color-cyan);
 }
 
-.synofinder-definition {
+.wordsmith-definition {
   font-size: 0.85em;
   color: var(--text-muted);
   padding-left: 4px;
@@ -368,7 +368,7 @@
 }
 
 /* Definition Group Styles */
-.synofinder-def-header {
+.wordsmith-def-header {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -377,12 +377,12 @@
   border-top: 1px solid var(--background-modifier-border);
 }
 
-.synofinder-def-header:first-child {
+.wordsmith-def-header:first-child {
   margin-top: 0;
   border-top: none;
 }
 
-.synofinder-def-pos {
+.wordsmith-def-pos {
   font-size: 0.75em;
   font-style: italic;
   color: var(--text-muted);
@@ -392,7 +392,7 @@
   flex-shrink: 0;
 }
 
-.synofinder-def-text {
+.wordsmith-def-text {
   font-size: 0.85em;
   font-style: italic;
   color: var(--text-muted);
@@ -403,17 +403,17 @@
   white-space: nowrap;
 }
 
-.synofinder-def-count {
+.wordsmith-def-count {
   font-size: 0.75em;
   color: var(--text-faint);
   flex-shrink: 0;
 }
 
-.synofinder-grouped-item {
+.wordsmith-grouped-item {
   padding-left: 16px;
 }
 
-.synofinder-show-more {
+.wordsmith-show-more {
   padding: 6px 12px 6px 16px;
   font-size: 0.8em;
   color: var(--interactive-accent);
@@ -421,13 +421,13 @@
   transition: color 0.15s ease;
 }
 
-.synofinder-show-more:hover {
+.wordsmith-show-more:hover {
   color: var(--interactive-accent-hover);
   text-decoration: underline;
 }
 
 /* Instructions */
-.synofinder-instructions {
+.wordsmith-instructions {
   display: flex;
   gap: 16px;
   padding: 8px 0 0 0;
@@ -435,25 +435,25 @@
   margin-top: 8px;
 }
 
-.synofinder-instructions span {
+.wordsmith-instructions span {
   font-size: 0.75em;
   color: var(--text-faint);
 }
 
 /* Settings Styles */
-.synofinder-sources-desc {
+.wordsmith-sources-desc {
   margin-bottom: 12px;
 }
 
 /* Drag and Drop Sources List */
-.synofinder-sources-list {
+.wordsmith-sources-list {
   display: flex;
   flex-direction: column;
   gap: 4px;
   margin-bottom: 16px;
 }
 
-.synofinder-source-item {
+.wordsmith-source-item {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -465,32 +465,32 @@
   transition: all 0.15s ease;
 }
 
-.synofinder-source-item:hover {
+.wordsmith-source-item:hover {
   background-color: var(--background-modifier-hover);
 }
 
-.synofinder-source-item.synofinder-dragging {
+.wordsmith-source-item.wordsmith-dragging {
   opacity: 0.5;
   cursor: grabbing;
 }
 
-.synofinder-source-item.synofinder-drag-over {
+.wordsmith-source-item.wordsmith-drag-over {
   border-color: var(--interactive-accent);
   background-color: rgba(var(--interactive-accent-rgb), 0.1);
 }
 
-.synofinder-drag-handle {
+.wordsmith-drag-handle {
   display: flex;
   align-items: center;
   color: var(--text-faint);
   flex-shrink: 0;
 }
 
-.synofinder-drag-handle:hover {
+.wordsmith-drag-handle:hover {
   color: var(--text-muted);
 }
 
-.synofinder-source-icon {
+.wordsmith-source-icon {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -498,97 +498,97 @@
 }
 
 /* Service icon sizing */
-.synofinder-service-icon {
+.wordsmith-service-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 
-.synofinder-service-icon svg {
+.wordsmith-service-icon svg {
   width: 100%;
   height: 100%;
 }
 
-.synofinder-icon-sm {
+.wordsmith-icon-sm {
   width: 16px;
   height: 16px;
 }
 
-.synofinder-icon-md {
+.wordsmith-icon-md {
   width: 18px;
   height: 18px;
 }
 
-.synofinder-icon-lg {
+.wordsmith-icon-lg {
   width: 24px;
   height: 24px;
 }
 
-.synofinder-source-content {
+.wordsmith-source-content {
   flex: 1;
   min-width: 0;
 }
 
-.synofinder-source-name {
+.wordsmith-source-name {
   font-weight: 500;
   color: var(--text-normal);
 }
 
-.synofinder-source-description {
+.wordsmith-source-description {
   font-size: 0.85em;
   color: var(--text-muted);
   margin-top: 2px;
 }
 
-.synofinder-source-types {
+.wordsmith-source-types {
   font-size: 0.75em;
   color: var(--text-faint);
   margin-top: 4px;
   font-style: italic;
 }
 
-.synofinder-source-toggle {
+.wordsmith-source-toggle {
   flex-shrink: 0;
 }
 
-.synofinder-source-toggle .setting-item {
+.wordsmith-source-toggle .setting-item {
   border: none;
   padding: 0;
 }
 
-.synofinder-source-toggle .setting-item-info {
+.wordsmith-source-toggle .setting-item-info {
   display: none;
 }
 
-.synofinder-source-toggle .setting-item-control {
+.wordsmith-source-toggle .setting-item-control {
   padding: 0;
 }
 
-.synofinder-status {
+.wordsmith-status {
   margin-left: 8px;
   font-size: 0.9em;
 }
 
-.synofinder-status-ok {
+.wordsmith-status-ok {
   color: var(--color-green);
 }
 
-.synofinder-status-missing {
+.wordsmith-status-missing {
   color: var(--text-muted);
 }
 
-.synofinder-progress {
+.wordsmith-progress {
   color: var(--text-accent);
   margin-left: 4px;
 }
 
 /* Add API Service Button */
-.synofinder-add-api-container {
+.wordsmith-add-api-container {
   margin-bottom: 16px;
 }
 
-.synofinder-add-api-button {
+.wordsmith-add-api-button {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -602,20 +602,20 @@
   transition: all 0.15s ease;
 }
 
-.synofinder-add-api-button:hover {
+.wordsmith-add-api-button:hover {
   background-color: var(--background-modifier-hover);
   border-color: var(--interactive-accent);
 }
 
 /* Source Name Row (for API services with key badge) */
-.synofinder-source-name-row {
+.wordsmith-source-name-row {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
 /* Key Badge */
-.synofinder-key-badge {
+.wordsmith-key-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -624,19 +624,19 @@
   color: var(--text-muted);
 }
 
-.synofinder-key-badge svg {
+.wordsmith-key-badge svg {
   width: 14px;
   height: 14px;
 }
 
 /* Source Actions (delete button) */
-.synofinder-source-actions {
+.wordsmith-source-actions {
   display: flex;
   align-items: center;
   margin-right: 8px;
 }
 
-.synofinder-delete-btn {
+.wordsmith-delete-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -650,23 +650,23 @@
   transition: all 0.15s ease;
 }
 
-.synofinder-delete-btn:hover {
+.wordsmith-delete-btn:hover {
   background-color: rgba(var(--color-red-rgb), 0.15);
   color: var(--color-red);
 }
 
 /* Add API Service Modal */
-.synofinder-add-api-modal {
+.wordsmith-add-api-modal {
   padding: 16px;
 }
 
-.synofinder-add-api-modal h2 {
+.wordsmith-add-api-modal h2 {
   margin-top: 0;
   margin-bottom: 16px;
 }
 
 /* API Instructions */
-.synofinder-api-instructions {
+.wordsmith-api-instructions {
   background-color: var(--background-secondary);
   border: 1px solid var(--background-modifier-border);
   border-radius: 6px;
@@ -674,36 +674,36 @@
   margin-bottom: 16px;
 }
 
-.synofinder-instructions-text {
+.wordsmith-instructions-text {
   font-size: 0.9em;
   color: var(--text-muted);
   margin-bottom: 8px;
   line-height: 1.5;
 }
 
-.synofinder-registration-link {
+.wordsmith-registration-link {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   font-size: 0.9em;
 }
 
-.synofinder-registration-link svg {
+.wordsmith-registration-link svg {
   width: 12px;
   height: 12px;
 }
 
 /* API Key Setting */
-.synofinder-api-key-setting {
+.wordsmith-api-key-setting {
   margin-bottom: 16px;
 }
 
-.synofinder-hidden {
+.wordsmith-hidden {
   display: none !important;
 }
 
 /* Validation Status */
-.synofinder-validation-status {
+.wordsmith-validation-status {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -712,30 +712,30 @@
   font-size: 0.9em;
 }
 
-.synofinder-validation-status.synofinder-status-loading {
+.wordsmith-validation-status.wordsmith-status-loading {
   color: var(--text-muted);
 }
 
-.synofinder-validation-status.synofinder-status-success {
+.wordsmith-validation-status.wordsmith-status-success {
   color: var(--color-green);
 }
 
-.synofinder-validation-status.synofinder-status-error {
+.wordsmith-validation-status.wordsmith-status-error {
   color: var(--color-red);
 }
 
-.synofinder-validation-status svg {
+.wordsmith-validation-status svg {
   width: 16px;
   height: 16px;
 }
 
 /* Spinner Animation */
-.synofinder-spinner {
+.wordsmith-spinner {
   display: inline-flex;
-  animation: synofinder-spin 1s linear infinite;
+  animation: wordsmith-spin 1s linear infinite;
 }
 
-@keyframes synofinder-spin {
+@keyframes wordsmith-spin {
   from {
     transform: rotate(0deg);
   }
@@ -745,86 +745,86 @@
 }
 
 /* Modal Buttons */
-.synofinder-modal-buttons {
+.wordsmith-modal-buttons {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
 }
 
-.synofinder-modal-buttons button {
+.wordsmith-modal-buttons button {
   padding: 8px 16px;
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.9em;
 }
 
-.synofinder-modal-buttons button:disabled {
+.wordsmith-modal-buttons button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
 /* API Source Colors in Results */
-.synofinder-source-merriam-webster {
+.wordsmith-source-merriam-webster {
   background-color: rgba(var(--color-purple-rgb), 0.2);
   color: var(--color-purple);
 }
 
-.synofinder-source-big-huge-thesaurus {
+.wordsmith-source-big-huge-thesaurus {
   background-color: rgba(var(--color-cyan-rgb), 0.2);
   color: var(--color-cyan);
 }
 
-.synofinder-source-words-api {
+.wordsmith-source-words-api {
   background-color: rgba(var(--color-yellow-rgb), 0.2);
   color: var(--color-yellow);
 }
 
-.synofinder-source-api-ninjas {
+.wordsmith-source-api-ninjas {
   background-color: rgba(var(--color-red-rgb), 0.2);
   color: var(--color-red);
 }
 
-.synofinder-source-altervista {
+.wordsmith-source-altervista {
   background-color: rgba(var(--color-pink-rgb), 0.2);
   color: var(--color-pink);
 }
 
-.synofinder-source-free-dictionary {
+.wordsmith-source-free-dictionary {
   background-color: rgba(var(--color-green-rgb), 0.2);
   color: var(--color-green);
 }
 
 /* Mobile-specific modal styles */
-body.is-mobile .synofinder-modal {
+body.is-mobile .wordsmith-modal {
   max-height: 80vh;
 }
 
-body.is-phone .synofinder-modal {
+body.is-phone .wordsmith-modal {
   max-height: 85vh;
 }
 
-body.is-phone .synofinder-results {
+body.is-phone .wordsmith-results {
   max-height: none;
   min-height: 250px;
 }
 
 /* Hide keyboard instructions on mobile (not relevant) */
-body.is-mobile .synofinder-instructions {
+body.is-mobile .wordsmith-instructions {
   display: none;
 }
 
 /* Larger tap targets on mobile */
-body.is-mobile .synofinder-suggestion {
+body.is-mobile .wordsmith-suggestion {
   padding: 12px;
   margin-bottom: 4px;
 }
 
-body.is-mobile .synofinder-tab {
+body.is-mobile .wordsmith-tab {
   padding: 8px 12px;
 }
 
 /* Quick Replace Popover Styles */
-.synofinder-quick-container {
+.wordsmith-quick-container {
   position: fixed;
   left: var(--quick-left);
   top: var(--quick-top);
@@ -838,7 +838,7 @@ body.is-mobile .synofinder-tab {
   max-width: 300px;
 }
 
-.synofinder-quick-item {
+.wordsmith-quick-item {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -847,12 +847,12 @@ body.is-mobile .synofinder-tab {
   cursor: pointer;
 }
 
-.synofinder-quick-item:hover,
-.synofinder-quick-item.is-selected {
+.wordsmith-quick-item:hover,
+.wordsmith-quick-item.is-selected {
   background-color: var(--background-modifier-hover);
 }
 
-.synofinder-quick-number {
+.wordsmith-quick-number {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -867,7 +867,7 @@ body.is-mobile .synofinder-tab {
 }
 
 /* Quick Replace Definition Header */
-.synofinder-quick-header {
+.wordsmith-quick-header {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -876,7 +876,7 @@ body.is-mobile .synofinder-tab {
   margin-bottom: 4px;
 }
 
-.synofinder-quick-pos {
+.wordsmith-quick-pos {
   font-size: 0.7em;
   font-style: italic;
   color: var(--text-muted);
@@ -886,7 +886,7 @@ body.is-mobile .synofinder-tab {
   flex-shrink: 0;
 }
 
-.synofinder-quick-def {
+.wordsmith-quick-def {
   font-size: 0.8em;
   font-style: italic;
   color: var(--text-muted);
@@ -897,7 +897,7 @@ body.is-mobile .synofinder-tab {
   white-space: nowrap;
 }
 
-.synofinder-quick-nav {
+.wordsmith-quick-nav {
   font-size: 0.75em;
   color: var(--text-faint);
   flex-shrink: 0;

@@ -97,7 +97,7 @@ export interface LookupCache {
   version: number;
 }
 
-export interface SynoFinderSettings {
+export interface WordsmithSettings {
   maxResults: number;
   sources: SourceConfig[];
   wordNetDownloaded: boolean;
@@ -108,7 +108,7 @@ export interface SynoFinderSettings {
   lookupCache: LookupCache;
 }
 
-export const DEFAULT_SETTINGS: SynoFinderSettings = {
+export const DEFAULT_SETTINGS: WordsmithSettings = {
   maxResults: 50,
   sources: [
     { kind: "builtin", id: "local", enabled: true },

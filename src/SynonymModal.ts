@@ -8,7 +8,7 @@ import {
   GroupedResults,
   DefinitionGroup,
 } from "./types";
-import SynoFinderPlugin from "./main";
+import WordsmithPlugin from "./main";
 import { replaceWord } from "./utils/wordExtractor";
 import { createServiceIcon } from "./utils/serviceIcons";
 import { groupByDefinition, flattenVisibleResults, getGroupDisplayDefinition, hasDisplayableDefinition } from "./utils/definitionGrouping";
@@ -23,7 +23,7 @@ const TYPE_LABELS: Record<RelationshipType, string> = {
 };
 
 export class SynonymModal extends Modal {
-  private plugin: SynoFinderPlugin;
+  private plugin: WordsmithPlugin;
   private word: string;
   private wordRange: WordRange;
   private tabMetadata: TabMetadata[];
@@ -62,7 +62,7 @@ export class SynonymModal extends Modal {
   private isAnimating: boolean = false;
 
   constructor(
-    plugin: SynoFinderPlugin,
+    plugin: WordsmithPlugin,
     word: string,
     wordRange: WordRange,
     tabMetadata: TabMetadata[],
@@ -166,26 +166,26 @@ export class SynonymModal extends Modal {
   onOpen(): void {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.addClass("synofinder-modal");
+    contentEl.addClass("wordsmith-modal");
 
     // Create search input
-    const inputContainer = contentEl.createDiv({ cls: "synofinder-input-container" });
+    const inputContainer = contentEl.createDiv({ cls: "wordsmith-input-container" });
     this.inputEl = inputContainer.createEl("input", {
       type: "text",
       placeholder: `Replace "${this.word}" with...`,
-      cls: "synofinder-input",
+      cls: "wordsmith-input",
     });
 
     // Create tab bar
-    this.tabContainerEl = contentEl.createDiv({ cls: "synofinder-tabs" });
+    this.tabContainerEl = contentEl.createDiv({ cls: "wordsmith-tabs" });
     this.renderTabs();
 
     // Create filter chips row (below tabs)
-    this.filterContainerEl = contentEl.createDiv({ cls: "synofinder-filters" });
+    this.filterContainerEl = contentEl.createDiv({ cls: "wordsmith-filters" });
     this.renderFilters();
 
     // Create results container
-    this.resultsContainerEl = contentEl.createDiv({ cls: "synofinder-results" });
+    this.resultsContainerEl = contentEl.createDiv({ cls: "wordsmith-results" });
     this.updateFilteredResults();
     this.renderResults();
 
@@ -195,7 +195,7 @@ export class SynonymModal extends Modal {
     this.resultsContainerEl.addEventListener("touchend", (e) => this.handleTouchEnd(e), { passive: true });
 
     // Add instructions
-    const instructionsEl = contentEl.createDiv({ cls: "synofinder-instructions" });
+    const instructionsEl = contentEl.createDiv({ cls: "wordsmith-instructions" });
     instructionsEl.createSpan({ text: "up/down navigate" });
     instructionsEl.createSpan({ text: "tab switch" });
     instructionsEl.createSpan({ text: "enter select" });
@@ -255,10 +255,10 @@ export class SynonymModal extends Modal {
       const isActive = tab.id === this.activeTabId;
 
       // Build CSS classes based on state
-      const classes = ["synofinder-tab"];
-      if (isActive) classes.push("synofinder-tab-active");
-      if (state === "grayed") classes.push("synofinder-tab-grayed");
-      if (state === "loading") classes.push("synofinder-tab-loading");
+      const classes = ["wordsmith-tab"];
+      if (isActive) classes.push("wordsmith-tab-active");
+      if (state === "grayed") classes.push("wordsmith-tab-grayed");
+      if (state === "loading") classes.push("wordsmith-tab-loading");
 
       const tabEl = this.tabContainerEl.createDiv({
         cls: classes.join(" "),
@@ -272,12 +272,12 @@ export class SynonymModal extends Modal {
         const count = this.getFilteredResultCountForTab(tab.id);
         tabEl.createSpan({
           text: `(${count})`,
-          cls: "synofinder-tab-count",
+          cls: "wordsmith-tab-count",
         });
         tabEl.setAttribute("title", `${tab.label} (${count})`);
       } else if (state === "loading") {
         tabEl.createSpan({
-          cls: "synofinder-tab-spinner synofinder-spinner",
+          cls: "wordsmith-tab-spinner wordsmith-spinner",
           text: "⟳",
         });
         tabEl.setAttribute("title", tab.label);
@@ -322,36 +322,36 @@ export class SynonymModal extends Modal {
 
     // Hide filters when spelling tab is active
     if (this.activeTabId === "spelling") {
-      this.filterContainerEl.addClass("synofinder-hidden");
+      this.filterContainerEl.addClass("wordsmith-hidden");
       return;
     }
-    this.filterContainerEl.removeClass("synofinder-hidden");
+    this.filterContainerEl.removeClass("wordsmith-hidden");
 
     for (const type of this.availableTypes) {
       const isActive = this.activeFilters.has(type);
       const isLoading = this.loadingTypes.has(type);
 
       const chipEl = this.filterContainerEl.createDiv({
-        cls: `synofinder-filter-chip ${isActive ? "synofinder-filter-active" : ""} ${isLoading ? "synofinder-filter-loading" : ""}`,
+        cls: `wordsmith-filter-chip ${isActive ? "wordsmith-filter-active" : ""} ${isLoading ? "wordsmith-filter-loading" : ""}`,
       });
 
       // Checkmark icon when active
       if (isActive && !isLoading) {
-        const checkIcon = chipEl.createSpan({ cls: "synofinder-filter-check" });
+        const checkIcon = chipEl.createSpan({ cls: "wordsmith-filter-check" });
         setIcon(checkIcon, "check");
       }
 
       // Spinner when loading
       if (isLoading) {
         chipEl.createSpan({
-          cls: "synofinder-filter-spinner synofinder-spinner",
+          cls: "wordsmith-filter-spinner wordsmith-spinner",
           text: "⟳",
         });
       }
 
       // Label
       chipEl.createSpan({
-        cls: "synofinder-filter-label",
+        cls: "wordsmith-filter-label",
         text: TYPE_LABELS[type],
       });
 
@@ -473,7 +473,7 @@ export class SynonymModal extends Modal {
 
     // Show empty state if no results after filtering
     if (this.visibleFlatResults.length === 0) {
-      const emptyEl = this.resultsContainerEl.createDiv({ cls: "synofinder-empty" });
+      const emptyEl = this.resultsContainerEl.createDiv({ cls: "wordsmith-empty" });
       emptyEl.setText("No results found");
       return;
     }
@@ -518,22 +518,22 @@ export class SynonymModal extends Modal {
     const visibleCount = isExpanded ? group.results.length : Math.min(group.results.length, this.MAX_PER_GROUP);
 
     // Render definition header
-    const headerEl = this.resultsContainerEl.createDiv({ cls: "synofinder-def-header" });
+    const headerEl = this.resultsContainerEl.createDiv({ cls: "wordsmith-def-header" });
 
     // Part of speech badge (if available)
     if (group.partOfSpeech) {
-      headerEl.createSpan({ cls: "synofinder-def-pos", text: group.partOfSpeech });
+      headerEl.createSpan({ cls: "wordsmith-def-pos", text: group.partOfSpeech });
     }
 
     // Definition text (only if there's a real definition)
     if (hasDisplayableDefinition(group)) {
       const defText = getGroupDisplayDefinition(group);
       const truncatedDef = defText.length > 60 ? defText.substring(0, 57) + "..." : defText;
-      headerEl.createSpan({ cls: "synofinder-def-text", text: truncatedDef });
+      headerEl.createSpan({ cls: "wordsmith-def-text", text: truncatedDef });
     }
 
     // Result count
-    headerEl.createSpan({ cls: "synofinder-def-count", text: `(${group.results.length})` });
+    headerEl.createSpan({ cls: "wordsmith-def-count", text: `(${group.results.length})` });
 
     // Render visible results for this group
     let flatIndex = startIndex;
@@ -546,7 +546,7 @@ export class SynonymModal extends Modal {
 
     // Show More button
     if (hasMore && !isExpanded) {
-      const showMoreEl = this.resultsContainerEl.createDiv({ cls: "synofinder-show-more" });
+      const showMoreEl = this.resultsContainerEl.createDiv({ cls: "wordsmith-show-more" });
       const remaining = group.results.length - this.MAX_PER_GROUP;
       showMoreEl.setText(`Show ${remaining} more`);
       showMoreEl.addEventListener("click", (e) => {
@@ -557,7 +557,7 @@ export class SynonymModal extends Modal {
       });
     } else if (hasMore && isExpanded) {
       // Show Less button when expanded
-      const showLessEl = this.resultsContainerEl.createDiv({ cls: "synofinder-show-more" });
+      const showLessEl = this.resultsContainerEl.createDiv({ cls: "wordsmith-show-more" });
       showLessEl.setText("Show less");
       showLessEl.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -572,7 +572,7 @@ export class SynonymModal extends Modal {
 
   private renderResultItem(result: SynonymResult, flatIndex: number, inGroup: boolean = false): void {
     const itemEl = this.resultsContainerEl.createDiv({
-      cls: `synofinder-suggestion ${flatIndex === this.selectedIndex ? "is-selected" : ""} ${inGroup ? "synofinder-grouped-item" : ""}`,
+      cls: `wordsmith-suggestion ${flatIndex === this.selectedIndex ? "is-selected" : ""} ${inGroup ? "wordsmith-grouped-item" : ""}`,
     });
 
     // Use compact rendering for grouped items (no definition shown - it's in header)
@@ -594,77 +594,77 @@ export class SynonymModal extends Modal {
   }
 
   private renderSuggestionCompact(item: SynonymResult, el: HTMLElement): void {
-    const container = el.createDiv({ cls: "synofinder-suggestion-content" });
-    const mainRow = container.createDiv({ cls: "synofinder-suggestion-main" });
+    const container = el.createDiv({ cls: "wordsmith-suggestion-content" });
+    const mainRow = container.createDiv({ cls: "wordsmith-suggestion-main" });
 
-    mainRow.createSpan({ cls: "synofinder-word", text: item.word });
+    mainRow.createSpan({ cls: "wordsmith-word", text: item.word });
 
     const badgeMap: Record<string, { cls: string; text: string }> = {
-      synonym: { cls: "synofinder-badge-syn", text: "Syn" },
-      antonym: { cls: "synofinder-badge-ant", text: "Ant" },
-      related: { cls: "synofinder-badge-rel", text: "Rel" },
-      hypernym: { cls: "synofinder-badge-hyper", text: "Hyper" },
-      hyponym: { cls: "synofinder-badge-hypo", text: "Hypo" },
-      spelling: { cls: "synofinder-badge-spell", text: "Spell" },
+      synonym: { cls: "wordsmith-badge-syn", text: "Syn" },
+      antonym: { cls: "wordsmith-badge-ant", text: "Ant" },
+      related: { cls: "wordsmith-badge-rel", text: "Rel" },
+      hypernym: { cls: "wordsmith-badge-hyper", text: "Hyper" },
+      hyponym: { cls: "wordsmith-badge-hypo", text: "Hypo" },
+      spelling: { cls: "wordsmith-badge-spell", text: "Spell" },
     };
     const badge = badgeMap[item.type] || badgeMap["related"]!;
-    mainRow.createSpan({ cls: `synofinder-badge ${badge.cls}`, text: badge.text });
+    mainRow.createSpan({ cls: `wordsmith-badge ${badge.cls}`, text: badge.text });
 
     // No part of speech shown (already in header)
 
     const sourceLabel = this.getSourceLabel(item.source);
-    const sourceClass = `synofinder-source-${this.sanitizeClassName(item.source)}`;
-    mainRow.createSpan({ cls: `synofinder-source ${sourceClass}`, text: sourceLabel });
+    const sourceClass = `wordsmith-source-${this.sanitizeClassName(item.source)}`;
+    mainRow.createSpan({ cls: `wordsmith-source ${sourceClass}`, text: sourceLabel });
 
     // No definition shown (already in header)
   }
 
   private renderLoading(): void {
-    const loadingEl = this.resultsContainerEl.createDiv({ cls: "synofinder-loading" });
-    loadingEl.createSpan({ cls: "synofinder-spinner", text: "⟳" });
+    const loadingEl = this.resultsContainerEl.createDiv({ cls: "wordsmith-loading" });
+    loadingEl.createSpan({ cls: "wordsmith-spinner", text: "⟳" });
     loadingEl.createDiv({
-      cls: "synofinder-loading-text",
+      cls: "wordsmith-loading-text",
       text: `Looking up "${this.word}"...`,
     });
   }
 
   private renderNoResults(): void {
     this.resultsContainerEl.empty();
-    const noResultsEl = this.resultsContainerEl.createDiv({ cls: "synofinder-no-results" });
-    noResultsEl.createDiv({ cls: "synofinder-no-results-title", text: "No Results Found" });
+    const noResultsEl = this.resultsContainerEl.createDiv({ cls: "wordsmith-no-results" });
+    noResultsEl.createDiv({ cls: "wordsmith-no-results-title", text: "No Results Found" });
     noResultsEl.createDiv({
-      cls: "synofinder-no-results-desc",
+      cls: "wordsmith-no-results-desc",
       text: `No synonyms or suggestions found for "${this.word}"`,
     });
   }
 
   private renderSuggestion(item: SynonymResult, el: HTMLElement): void {
-    const container = el.createDiv({ cls: "synofinder-suggestion-content" });
-    const mainRow = container.createDiv({ cls: "synofinder-suggestion-main" });
+    const container = el.createDiv({ cls: "wordsmith-suggestion-content" });
+    const mainRow = container.createDiv({ cls: "wordsmith-suggestion-main" });
 
-    mainRow.createSpan({ cls: "synofinder-word", text: item.word });
+    mainRow.createSpan({ cls: "wordsmith-word", text: item.word });
 
     const badgeMap: Record<string, { cls: string; text: string }> = {
-      synonym: { cls: "synofinder-badge-syn", text: "Syn" },
-      antonym: { cls: "synofinder-badge-ant", text: "Ant" },
-      related: { cls: "synofinder-badge-rel", text: "Rel" },
-      hypernym: { cls: "synofinder-badge-hyper", text: "Hyper" },
-      hyponym: { cls: "synofinder-badge-hypo", text: "Hypo" },
-      spelling: { cls: "synofinder-badge-spell", text: "Spell" },
+      synonym: { cls: "wordsmith-badge-syn", text: "Syn" },
+      antonym: { cls: "wordsmith-badge-ant", text: "Ant" },
+      related: { cls: "wordsmith-badge-rel", text: "Rel" },
+      hypernym: { cls: "wordsmith-badge-hyper", text: "Hyper" },
+      hyponym: { cls: "wordsmith-badge-hypo", text: "Hypo" },
+      spelling: { cls: "wordsmith-badge-spell", text: "Spell" },
     };
     const badge = badgeMap[item.type] || badgeMap["related"]!;
-    mainRow.createSpan({ cls: `synofinder-badge ${badge.cls}`, text: badge.text });
+    mainRow.createSpan({ cls: `wordsmith-badge ${badge.cls}`, text: badge.text });
 
     if (item.partOfSpeech) {
-      mainRow.createSpan({ cls: "synofinder-pos", text: item.partOfSpeech });
+      mainRow.createSpan({ cls: "wordsmith-pos", text: item.partOfSpeech });
     }
 
     const sourceLabel = this.getSourceLabel(item.source);
-    const sourceClass = `synofinder-source-${this.sanitizeClassName(item.source)}`;
-    mainRow.createSpan({ cls: `synofinder-source ${sourceClass}`, text: sourceLabel });
+    const sourceClass = `wordsmith-source-${this.sanitizeClassName(item.source)}`;
+    mainRow.createSpan({ cls: `wordsmith-source ${sourceClass}`, text: sourceLabel });
 
     if (item.definition) {
-      const defRow = container.createDiv({ cls: "synofinder-definition" });
+      const defRow = container.createDiv({ cls: "wordsmith-definition" });
       const truncatedDef =
         item.definition.length > 80 ? item.definition.substring(0, 77) + "..." : item.definition;
       defRow.setText(truncatedDef);
@@ -741,7 +741,7 @@ export class SynonymModal extends Modal {
   }
 
   private updateSelectionStyles(): void {
-    const items = this.resultsContainerEl.querySelectorAll(".synofinder-suggestion");
+    const items = this.resultsContainerEl.querySelectorAll(".wordsmith-suggestion");
     items.forEach((item, i) => {
       item.toggleClass("is-selected", i === this.selectedIndex);
     });
@@ -816,8 +816,8 @@ export class SynonymModal extends Modal {
     this.isAnimating = true;
 
     // Determine slide-out direction (opposite to navigation)
-    const slideOutClass = direction === "right" ? "synofinder-slide-out-left" : "synofinder-slide-out-right";
-    const slideInClass = direction === "right" ? "synofinder-slide-in-right" : "synofinder-slide-in-left";
+    const slideOutClass = direction === "right" ? "wordsmith-slide-out-left" : "wordsmith-slide-out-right";
+    const slideInClass = direction === "right" ? "wordsmith-slide-in-right" : "wordsmith-slide-in-left";
 
     // Start slide-out animation
     this.resultsContainerEl.addClass(slideOutClass);

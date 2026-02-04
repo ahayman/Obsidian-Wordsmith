@@ -1,6 +1,6 @@
 {
-  "id": "synofinder",
-  "name": "SynoFinder",
+  "id": "wordsmith",
+  "name": "Wordsmith",
   "version": "0.1.0",
   "minAppVersion": "1.0.0",
   "description": "Find synonyms and definitions of words directly within Obsidian",

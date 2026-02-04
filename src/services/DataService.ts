@@ -2,7 +2,7 @@ import { App } from "obsidian";
 import {
   GroupedLookupResult,
   SynonymResult,
-  SynoFinderSettings,
+  WordsmithSettings,
   isBuiltinSource,
   isAPISource,
   isSourceEnabled,
@@ -27,7 +27,7 @@ import { getAPIServiceInfo, BUILTIN_SERVICE_TYPES } from "./SynonymService";
 
 export class DataService {
   private app: App;
-  private settings: SynoFinderSettings;
+  private settings: WordsmithSettings;
   wordNet: WordNetService;
   moby: MobyService;
   datamuse: DatamuseService;
@@ -36,7 +36,7 @@ export class DataService {
   private apiServices: Map<string, SynonymService> = new Map();
   cacheService: CacheService;
 
-  constructor(app: App, pluginDir: string, settings: SynoFinderSettings) {
+  constructor(app: App, pluginDir: string, settings: WordsmithSettings) {
     this.app = app;
     this.settings = settings;
     this.wordNet = new WordNetService(app, pluginDir);
@@ -62,7 +62,7 @@ export class DataService {
     }
   }
 
-  updateSettings(settings: SynoFinderSettings): void {
+  updateSettings(settings: WordsmithSettings): void {
     this.settings = settings;
     this.datamuse.setMaxResults(settings.maxResults);
     this.cacheService.setMaxSize(settings.maxCacheSize);

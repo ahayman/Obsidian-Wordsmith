@@ -1,5 +1,5 @@
 import { App, PluginSettingTab, setIcon, Setting } from "obsidian";
-import SynoFinderPlugin from "./main";
+import WordsmithPlugin from "./main";
 import {
   TAB_LABELS,
   TAB_DESCRIPTIONS,
@@ -23,11 +23,11 @@ const TYPE_DISPLAY_LABELS: Record<RelationshipType, string> = {
 };
 
 export class SynonymSettingsTab extends PluginSettingTab {
-  plugin: SynoFinderPlugin;
+  plugin: WordsmithPlugin;
   private draggedIndex: number | null = null;
   private sourcesListEl: HTMLElement | null = null;
 
-  constructor(app: App, plugin: SynoFinderPlugin) {
+  constructor(app: App, plugin: WordsmithPlugin) {
     super(app, plugin);
     this.plugin = plugin;
   }
@@ -53,7 +53,7 @@ export class SynonymSettingsTab extends PluginSettingTab {
     new Setting(containerEl).setName("Data sources").setHeading();
 
     containerEl.createEl("p", {
-      cls: "setting-item-description synofinder-sources-desc",
+      cls: "setting-item-description wordsmith-sources-desc",
       text: "Enable/disable sources and reorder them. The order here determines the tab order in the synonym modal.",
     });
 
@@ -61,11 +61,11 @@ export class SynonymSettingsTab extends PluginSettingTab {
 
     // Add API Service button
     const addButtonContainer = containerEl.createDiv({
-      cls: "synofinder-add-api-container",
+      cls: "wordsmith-add-api-container",
     });
 
     const addButton = addButtonContainer.createEl("button", {
-      cls: "synofinder-add-api-button",
+      cls: "wordsmith-add-api-button",
     });
     const plusIcon = addButton.createSpan();
     setIcon(plusIcon, "plus");
@@ -130,23 +130,23 @@ export class SynonymSettingsTab extends PluginSettingTab {
   private renderSourcesList(containerEl: HTMLElement): void {
     const sources = this.plugin.settings.sources;
 
-    this.sourcesListEl = containerEl.createDiv({ cls: "synofinder-sources-list" });
+    this.sourcesListEl = containerEl.createDiv({ cls: "wordsmith-sources-list" });
 
     for (let i = 0; i < sources.length; i++) {
       const source = sources[i];
       if (!source) continue;
 
       const itemEl = this.sourcesListEl.createDiv({
-        cls: "synofinder-source-item",
+        cls: "wordsmith-source-item",
         attr: { draggable: "true", "data-index": String(i) },
       });
 
       // Drag handle
-      const handleEl = itemEl.createDiv({ cls: "synofinder-drag-handle" });
+      const handleEl = itemEl.createDiv({ cls: "wordsmith-drag-handle" });
       setIcon(handleEl, "grip-vertical");
 
       // Service icon
-      const iconContainer = itemEl.createDiv({ cls: "synofinder-source-icon" });
+      const iconContainer = itemEl.createDiv({ cls: "wordsmith-source-icon" });
       if (isBuiltinSource(source)) {
         createServiceIcon(iconContainer, source.id, 24);
       } else if (isAPISource(source)) {
@@ -154,40 +154,40 @@ export class SynonymSettingsTab extends PluginSettingTab {
       }
 
       // Content
-      const contentEl = itemEl.createDiv({ cls: "synofinder-source-content" });
+      const contentEl = itemEl.createDiv({ cls: "wordsmith-source-content" });
 
       if (isBuiltinSource(source)) {
-        const nameRow = contentEl.createDiv({ cls: "synofinder-source-name-row" });
-        const nameEl = nameRow.createSpan({ cls: "synofinder-source-name" });
+        const nameRow = contentEl.createDiv({ cls: "wordsmith-source-name-row" });
+        const nameEl = nameRow.createSpan({ cls: "wordsmith-source-name" });
         nameEl.setText(TAB_LABELS[source.id]);
-        const descEl = contentEl.createDiv({ cls: "synofinder-source-description" });
+        const descEl = contentEl.createDiv({ cls: "wordsmith-source-description" });
         descEl.setText(TAB_DESCRIPTIONS[source.id]);
 
         // Show supported types
         const supportedTypes = BUILTIN_SERVICE_TYPES[source.id];
-        const typesEl = contentEl.createDiv({ cls: "synofinder-source-types" });
+        const typesEl = contentEl.createDiv({ cls: "wordsmith-source-types" });
         typesEl.setText(`Supports: ${this.formatSupportedTypes(supportedTypes)}`);
       } else if (isAPISource(source)) {
-        const nameRow = contentEl.createDiv({ cls: "synofinder-source-name-row" });
-        const keyBadge = nameRow.createSpan({ cls: "synofinder-key-badge" });
+        const nameRow = contentEl.createDiv({ cls: "wordsmith-source-name-row" });
+        const keyBadge = nameRow.createSpan({ cls: "wordsmith-key-badge" });
         setIcon(keyBadge, "key");
-        const nameEl = nameRow.createSpan({ cls: "synofinder-source-name" });
+        const nameEl = nameRow.createSpan({ cls: "wordsmith-source-name" });
         const serviceInfo = getAPIServiceInfo(source.config.type);
         nameEl.setText(serviceInfo.name);
 
-        const descEl = contentEl.createDiv({ cls: "synofinder-source-description" });
+        const descEl = contentEl.createDiv({ cls: "wordsmith-source-description" });
         descEl.setText(serviceInfo.description);
 
         // Show supported types
-        const typesEl = contentEl.createDiv({ cls: "synofinder-source-types" });
+        const typesEl = contentEl.createDiv({ cls: "wordsmith-source-types" });
         typesEl.setText(`Supports: ${this.formatSupportedTypes(serviceInfo.supportedTypes)}`);
       }
 
       // Actions container (delete button for API services)
       if (isAPISource(source)) {
-        const actionsEl = itemEl.createDiv({ cls: "synofinder-source-actions" });
+        const actionsEl = itemEl.createDiv({ cls: "wordsmith-source-actions" });
         const deleteBtn = actionsEl.createEl("button", {
-          cls: "synofinder-delete-btn clickable-icon",
+          cls: "wordsmith-delete-btn clickable-icon",
           attr: { "aria-label": "Delete API service" },
         });
         setIcon(deleteBtn, "trash-2");
@@ -198,7 +198,7 @@ export class SynonymSettingsTab extends PluginSettingTab {
       }
 
       // Toggle
-      const toggleEl = itemEl.createDiv({ cls: "synofinder-source-toggle" });
+      const toggleEl = itemEl.createDiv({ cls: "wordsmith-source-toggle" });
       new Setting(toggleEl).addToggle((toggle) =>
         toggle.setValue(isSourceEnabled(source)).onChange(async (value) => {
           if (isBuiltinSource(source)) {
@@ -240,7 +240,7 @@ export class SynonymSettingsTab extends PluginSettingTab {
   private handleDragStart(e: DragEvent, index: number): void {
     this.draggedIndex = index;
     const target = e.target as HTMLElement;
-    target.addClass("synofinder-dragging");
+    target.addClass("wordsmith-dragging");
     if (e.dataTransfer) {
       e.dataTransfer.effectAllowed = "move";
       e.dataTransfer.setData("text/plain", String(index));
@@ -250,8 +250,8 @@ export class SynonymSettingsTab extends PluginSettingTab {
   private handleDragEnd(): void {
     this.draggedIndex = null;
     // Remove all drag-related classes
-    this.sourcesListEl?.querySelectorAll(".synofinder-source-item").forEach((el) => {
-      el.removeClass("synofinder-dragging", "synofinder-drag-over");
+    this.sourcesListEl?.querySelectorAll(".wordsmith-source-item").forEach((el) => {
+      el.removeClass("wordsmith-dragging", "wordsmith-drag-over");
     });
   }
 
@@ -262,11 +262,11 @@ export class SynonymSettingsTab extends PluginSettingTab {
     const target = e.currentTarget as HTMLElement;
 
     // Remove drag-over class from all items
-    this.sourcesListEl?.querySelectorAll(".synofinder-source-item").forEach((el) => {
-      el.removeClass("synofinder-drag-over");
+    this.sourcesListEl?.querySelectorAll(".wordsmith-source-item").forEach((el) => {
+      el.removeClass("wordsmith-drag-over");
     });
 
-    target.addClass("synofinder-drag-over");
+    target.addClass("wordsmith-drag-over");
   }
 
   private handleDrop(e: DragEvent, targetIndex: number): void {

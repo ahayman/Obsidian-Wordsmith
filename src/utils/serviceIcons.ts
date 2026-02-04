@@ -128,7 +128,7 @@ export function getServiceIconSVG(serviceId: string): string {
 
 /**
  * Creates an icon element for a service and appends it to the parent.
- * Uses a size class for styling (synofinder-icon-sm, synofinder-icon-md, synofinder-icon-lg).
+ * Uses a size class for styling (wordsmith-icon-sm, wordsmith-icon-md, wordsmith-icon-lg).
  * @param parent - Parent element to append the icon to
  * @param serviceId - The service ID
  * @param size - Icon size in pixels (16 = sm, 18 = md, 24 = lg)
@@ -139,8 +139,8 @@ export function createServiceIcon(
   serviceId: string,
   size: number = 18
 ): HTMLElement {
-  const sizeClass = size <= 16 ? "synofinder-icon-sm" : size >= 24 ? "synofinder-icon-lg" : "synofinder-icon-md";
-  const iconEl = parent.createSpan({ cls: `synofinder-service-icon ${sizeClass}` });
+  const sizeClass = size <= 16 ? "wordsmith-icon-sm" : size >= 24 ? "wordsmith-icon-lg" : "wordsmith-icon-md";
+  const iconEl = parent.createSpan({ cls: `wordsmith-service-icon ${sizeClass}` });
 
   // Parse and append the SVG safely
   const svgString = getServiceIconSVG(serviceId);

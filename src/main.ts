@@ -1,5 +1,5 @@
 import { Editor, MarkdownFileInfo, MarkdownView, Notice, Plugin } from "obsidian";
-import { SynoFinderSettings, DEFAULT_SETTINGS, SourceConfig, LookupCache, RelationshipType } from "./types";
+import { WordsmithSettings, DEFAULT_SETTINGS, SourceConfig, LookupCache, RelationshipType } from "./types";
 import { DataService } from "./services/DataService";
 import { SynonymModal } from "./SynonymModal";
 import { SynonymSettingsTab } from "./SynonymSettingsTab";
@@ -28,7 +28,7 @@ function isOldSettings(data: unknown): data is OldSettings {
   return firstSource && !("kind" in firstSource);
 }
 
-function migrateSettings(old: OldSettings): SynoFinderSettings {
+function migrateSettings(old: OldSettings): WordsmithSettings {
   return {
     maxResults: old.maxResults,
     sources: old.sources.map((s): SourceConfig => ({
@@ -67,24 +67,24 @@ function needsSpellingMigration(data: unknown): boolean {
          (obj.nspellDownloaded === undefined || obj.offlineSpellingOnly === undefined);
 }
 
-function addCacheFields(data: Record<string, unknown>): SynoFinderSettings {
+function addCacheFields(data: Record<string, unknown>): WordsmithSettings {
   return {
     ...data,
     maxCacheSize: data.maxCacheSize ?? DEFAULT_SETTINGS.maxCacheSize,
     lookupCache: (data.lookupCache as LookupCache) ?? { entries: {}, version: 1 },
-  } as SynoFinderSettings;
+  } as WordsmithSettings;
 }
 
-function addSpellingFields(data: Record<string, unknown>): SynoFinderSettings {
+function addSpellingFields(data: Record<string, unknown>): WordsmithSettings {
   return {
     ...data,
     nspellDownloaded: data.nspellDownloaded ?? DEFAULT_SETTINGS.nspellDownloaded,
     offlineSpellingOnly: data.offlineSpellingOnly ?? DEFAULT_SETTINGS.offlineSpellingOnly,
-  } as SynoFinderSettings;
+  } as WordsmithSettings;
 }
 
-export default class SynoFinderPlugin extends Plugin {
-  settings: SynoFinderSettings = DEFAULT_SETTINGS;
+export default class WordsmithPlugin extends Plugin {
+  settings: WordsmithSettings = DEFAULT_SETTINGS;
   dataService!: DataService;
 
   async onload(): Promise<void> {
@@ -194,7 +194,7 @@ export default class SynoFinderPlugin extends Plugin {
       this.settings = Object.assign(
         {},
         DEFAULT_SETTINGS,
-        loadedData as SynoFinderSettings
+        loadedData as WordsmithSettings
       );
     } else {
       this.settings = { ...DEFAULT_SETTINGS };

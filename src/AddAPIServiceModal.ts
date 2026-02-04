@@ -1,5 +1,5 @@
 import { Modal, Setting, setIcon } from "obsidian";
-import SynoFinderPlugin from "./main";
+import WordsmithPlugin from "./main";
 import { APIServiceConfig, APIServiceType } from "./types";
 import {
   API_SERVICE_INFO,
@@ -9,7 +9,7 @@ import {
 import { createAPIServiceForValidation } from "./services/api";
 
 export class AddAPIServiceModal extends Modal {
-  private plugin: SynoFinderPlugin;
+  private plugin: WordsmithPlugin;
   private onAdd: (config: APIServiceConfig) => void;
 
   private selectedType: APIServiceType = "free-dictionary";
@@ -25,7 +25,7 @@ export class AddAPIServiceModal extends Modal {
   private instructionsContainerEl: HTMLElement | null = null;
 
   constructor(
-    plugin: SynoFinderPlugin,
+    plugin: WordsmithPlugin,
     onAdd: (config: APIServiceConfig) => void
   ) {
     super(plugin.app);
@@ -36,7 +36,7 @@ export class AddAPIServiceModal extends Modal {
   onOpen(): void {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.addClass("synofinder-add-api-modal");
+    contentEl.addClass("wordsmith-add-api-modal");
 
     contentEl.createEl("h2", { text: "Add API service" });
 
@@ -60,7 +60,7 @@ export class AddAPIServiceModal extends Modal {
 
     // Instructions container
     this.instructionsContainerEl = contentEl.createDiv({
-      cls: "synofinder-api-instructions",
+      cls: "wordsmith-api-instructions",
     });
     this.updateInstructions();
 
@@ -77,16 +77,16 @@ export class AddAPIServiceModal extends Modal {
         });
       });
 
-    apiKeySetting.settingEl.addClass("synofinder-api-key-setting");
+    apiKeySetting.settingEl.addClass("wordsmith-api-key-setting");
     this.updateAPIKeyVisibility();
 
     // Validation status container
     this.statusContainerEl = contentEl.createDiv({
-      cls: "synofinder-validation-status",
+      cls: "wordsmith-validation-status",
     });
 
     // Buttons container
-    const buttonsEl = contentEl.createDiv({ cls: "synofinder-modal-buttons" });
+    const buttonsEl = contentEl.createDiv({ cls: "wordsmith-modal-buttons" });
 
     // Validate button
     const validateBtn = buttonsEl.createEl("button", { text: "Validate" });
@@ -114,13 +114,13 @@ export class AddAPIServiceModal extends Modal {
     const info = getAPIServiceInfo(this.selectedType);
 
     const instructionsText = this.instructionsContainerEl.createDiv({
-      cls: "synofinder-instructions-text",
+      cls: "wordsmith-instructions-text",
     });
     instructionsText.setText(info.registrationInstructions);
 
     if (info.registrationUrl) {
       const linkEl = this.instructionsContainerEl.createEl("a", {
-        cls: "synofinder-registration-link",
+        cls: "wordsmith-registration-link",
         text: "Get API key",
         href: info.registrationUrl,
       });
@@ -133,14 +133,14 @@ export class AddAPIServiceModal extends Modal {
   private updateAPIKeyVisibility(): void {
     const info = getAPIServiceInfo(this.selectedType);
     const apiKeySetting = this.contentEl.querySelector(
-      ".synofinder-api-key-setting"
+      ".wordsmith-api-key-setting"
     );
 
     if (apiKeySetting) {
       if (info.requiresKey) {
-        apiKeySetting.removeClass("synofinder-hidden");
+        apiKeySetting.removeClass("wordsmith-hidden");
       } else {
-        apiKeySetting.addClass("synofinder-hidden");
+        apiKeySetting.addClass("wordsmith-hidden");
         // Auto-validate free services
         this.isValidated = true;
         this.updateAddButton();
@@ -160,25 +160,25 @@ export class AddAPIServiceModal extends Modal {
 
     this.statusContainerEl.empty();
     this.statusContainerEl.removeClass(
-      "synofinder-status-success",
-      "synofinder-status-error",
-      "synofinder-status-loading"
+      "wordsmith-status-success",
+      "wordsmith-status-error",
+      "wordsmith-status-loading"
     );
 
     if (this.isValidating) {
-      this.statusContainerEl.addClass("synofinder-status-loading");
+      this.statusContainerEl.addClass("wordsmith-status-loading");
       const spinnerEl = this.statusContainerEl.createSpan({
-        cls: "synofinder-spinner",
+        cls: "wordsmith-spinner",
       });
       setIcon(spinnerEl, "loader");
       this.statusContainerEl.createSpan({ text: " Validating..." });
     } else if (this.validationError) {
-      this.statusContainerEl.addClass("synofinder-status-error");
+      this.statusContainerEl.addClass("wordsmith-status-error");
       const iconEl = this.statusContainerEl.createSpan();
       setIcon(iconEl, "x-circle");
       this.statusContainerEl.createSpan({ text: ` ${this.validationError}` });
     } else if (this.isValidated) {
-      this.statusContainerEl.addClass("synofinder-status-success");
+      this.statusContainerEl.addClass("wordsmith-status-success");
       const iconEl = this.statusContainerEl.createSpan();
       setIcon(iconEl, "check-circle");
       this.statusContainerEl.createSpan({ text: " API key is valid" });

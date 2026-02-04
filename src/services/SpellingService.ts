@@ -1,23 +1,23 @@
-import { SynonymResult, SynoFinderSettings } from "../types";
+import { SynonymResult, WordsmithSettings } from "../types";
 import { NSpellService } from "./NSpellService";
 import { DatamuseService } from "./DatamuseService";
 
 export class SpellingService {
   private nspell: NSpellService;
   private datamuse: DatamuseService;
-  private settings: SynoFinderSettings;
+  private settings: WordsmithSettings;
 
   constructor(
     nspell: NSpellService,
     datamuse: DatamuseService,
-    settings: SynoFinderSettings
+    settings: WordsmithSettings
   ) {
     this.nspell = nspell;
     this.datamuse = datamuse;
     this.settings = settings;
   }
 
-  updateSettings(settings: SynoFinderSettings): void {
+  updateSettings(settings: WordsmithSettings): void {
     this.settings = settings;
   }
 

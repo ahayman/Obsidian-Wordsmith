@@ -90,7 +90,7 @@ export class QuickReplaceSuggest {
 
     // Create container
     this.containerEl = document.createElement("div");
-    this.containerEl.className = "synofinder-quick-container";
+    this.containerEl.className = "wordsmith-quick-container";
 
     // Add to DOM first so we can measure for positioning
     document.body.appendChild(this.containerEl);
@@ -128,24 +128,24 @@ export class QuickReplaceSuggest {
 
     this.suggestions.forEach((suggestion, index) => {
       const item = document.createElement("div");
-      item.className = `synofinder-quick-item ${index === this.selectedIndex ? "is-selected" : ""}`;
+      item.className = `wordsmith-quick-item ${index === this.selectedIndex ? "is-selected" : ""}`;
 
       // Number indicator
       const numSpan = document.createElement("span");
-      numSpan.className = "synofinder-quick-number";
+      numSpan.className = "wordsmith-quick-number";
       numSpan.textContent = `${index + 1}`;
       item.appendChild(numSpan);
 
       // Word
       const wordSpan = document.createElement("span");
-      wordSpan.className = "synofinder-word";
+      wordSpan.className = "wordsmith-word";
       wordSpan.textContent = suggestion.word;
       item.appendChild(wordSpan);
 
       // Badge
       const badgeInfo = this.getBadgeInfo(suggestion.type);
       const badgeSpan = document.createElement("span");
-      badgeSpan.className = `synofinder-badge ${badgeInfo.cls}`;
+      badgeSpan.className = `wordsmith-badge ${badgeInfo.cls}`;
       badgeSpan.textContent = badgeInfo.text;
       item.appendChild(badgeSpan);
 
@@ -173,12 +173,12 @@ export class QuickReplaceSuggest {
     if (!currentGroup) return;
 
     const headerEl = document.createElement("div");
-    headerEl.className = "synofinder-quick-header";
+    headerEl.className = "wordsmith-quick-header";
 
     // Part of speech (if available)
     if (currentGroup.partOfSpeech) {
       const posSpan = document.createElement("span");
-      posSpan.className = "synofinder-quick-pos";
+      posSpan.className = "wordsmith-quick-pos";
       posSpan.textContent = currentGroup.partOfSpeech;
       headerEl.appendChild(posSpan);
     }
@@ -188,7 +188,7 @@ export class QuickReplaceSuggest {
       const defText = getGroupDisplayDefinition(currentGroup);
       const truncatedDef = defText.length > 40 ? defText.substring(0, 37) + "..." : defText;
       const defSpan = document.createElement("span");
-      defSpan.className = "synofinder-quick-def";
+      defSpan.className = "wordsmith-quick-def";
       defSpan.textContent = truncatedDef;
       headerEl.appendChild(defSpan);
     }
@@ -196,7 +196,7 @@ export class QuickReplaceSuggest {
     // Navigation indicator (only show if multiple groups)
     if (this.definitionGroups.length > 1) {
       const navSpan = document.createElement("span");
-      navSpan.className = "synofinder-quick-nav";
+      navSpan.className = "wordsmith-quick-nav";
       navSpan.textContent = `(${this.currentDefinitionIndex + 1}/${this.definitionGroups.length})`;
       headerEl.appendChild(navSpan);
     }
@@ -207,18 +207,18 @@ export class QuickReplaceSuggest {
   private getBadgeInfo(type: string): { cls: string; text: string } {
     switch (type) {
       case "synonym":
-        return { cls: "synofinder-badge-syn", text: "Syn" };
+        return { cls: "wordsmith-badge-syn", text: "Syn" };
       case "antonym":
-        return { cls: "synofinder-badge-ant", text: "Ant" };
+        return { cls: "wordsmith-badge-ant", text: "Ant" };
       case "hypernym":
-        return { cls: "synofinder-badge-hyper", text: "Hyper" };
+        return { cls: "wordsmith-badge-hyper", text: "Hyper" };
       case "hyponym":
-        return { cls: "synofinder-badge-hypo", text: "Hypo" };
+        return { cls: "wordsmith-badge-hypo", text: "Hypo" };
       case "spelling":
-        return { cls: "synofinder-badge-spell", text: "Spell" };
+        return { cls: "wordsmith-badge-spell", text: "Spell" };
       case "related":
       default:
-        return { cls: "synofinder-badge-rel", text: "Rel" };
+        return { cls: "wordsmith-badge-rel", text: "Rel" };
     }
   }
 
