@@ -1,7 +1,8 @@
 import { App, Editor, Notice } from "obsidian";
-import { SynonymResult, WordRange, RelationshipType } from "./types";
+import { SynonymResult, WordRange, RelationshipType, DefinitionGroup } from "./types";
 import { DataService } from "./services/DataService";
 import { getWordUnderCursor, replaceWord } from "./utils/wordExtractor";
+import { groupByDefinition, getGroupDisplayDefinition, hasDisplayableDefinition } from "./utils/definitionGrouping";
 
 interface QuickReplaceContext {
   word: string;
@@ -18,6 +19,17 @@ export class QuickReplaceSuggest {
   private selectedIndex = 0;
   private boundKeyHandler: (e: KeyboardEvent) => void;
   private boundClickOutsideHandler: (e: MouseEvent) => void;
+
+  // Definition grouping state
+  private definitionGroups: DefinitionGroup[] = [];
+  private ungroupedResults: SynonymResult[] = [];
+  private currentDefinitionIndex: number = 0;
+  private readonly MAX_QUICK_ITEMS = 5;
+
+  // Touch handling
+  private touchStartX: number = 0;
+  private touchStartY: number = 0;
+  private isSwiping: boolean = false;
 
   constructor(app: App, dataService: DataService) {
     this.app = app;
@@ -40,16 +52,36 @@ export class QuickReplaceSuggest {
     };
 
     // Fetch suggestions for the specified type
-    const suggestions = await this.dataService.getQuickReplaceSuggestions(extraction.word, type);
-    if (suggestions.length === 0) {
+    const allSuggestions = await this.dataService.getQuickReplaceSuggestions(extraction.word, type);
+    if (allSuggestions.length === 0) {
       new Notice(`No ${type === "antonym" ? "antonyms" : "suggestions"} found`);
       this.context = null;
       return;
     }
 
-    this.suggestions = suggestions;
+    // Group results by definition
+    const grouped = groupByDefinition(allSuggestions);
+    this.definitionGroups = grouped.grouped;
+    this.ungroupedResults = grouped.ungrouped;
+    this.currentDefinitionIndex = 0;
+
+    // Set initial suggestions based on grouping
+    this.updateSuggestionsForCurrentDefinition();
     this.selectedIndex = 0;
     this.show(editor);
+  }
+
+  private updateSuggestionsForCurrentDefinition(): void {
+    if (this.definitionGroups.length > 0) {
+      // Show results from current definition group
+      const currentGroup = this.definitionGroups[this.currentDefinitionIndex];
+      if (currentGroup) {
+        this.suggestions = currentGroup.results.slice(0, this.MAX_QUICK_ITEMS);
+      }
+    } else {
+      // No grouped results, show ungrouped
+      this.suggestions = this.ungroupedResults.slice(0, this.MAX_QUICK_ITEMS);
+    }
   }
 
   private show(editor: Editor): void {
@@ -72,11 +104,27 @@ export class QuickReplaceSuggest {
     // Add event listeners
     document.addEventListener("keydown", this.boundKeyHandler, true);
     document.addEventListener("mousedown", this.boundClickOutsideHandler, true);
+
+    // Add touch event listeners for swipe gestures
+    this.containerEl.addEventListener("touchstart", (e) => this.handleTouchStart(e), { passive: true });
+    this.containerEl.addEventListener("touchmove", (e) => this.handleTouchMove(e), { passive: false });
+    this.containerEl.addEventListener("touchend", (e) => this.handleTouchEnd(e), { passive: true });
   }
 
   private renderSuggestions(): void {
     if (!this.containerEl) return;
     this.containerEl.innerHTML = "";
+
+    // Render definition header if we have multiple definitions to cycle through
+    // OR if the current group has a definition to display
+    if (this.definitionGroups.length > 1) {
+      this.renderDefinitionHeader();
+    } else if (this.definitionGroups.length === 1) {
+      const currentGroup = this.definitionGroups[0];
+      if (currentGroup && hasDisplayableDefinition(currentGroup)) {
+        this.renderDefinitionHeader();
+      }
+    }
 
     this.suggestions.forEach((suggestion, index) => {
       const item = document.createElement("div");
@@ -116,6 +164,44 @@ export class QuickReplaceSuggest {
 
       this.containerEl!.appendChild(item);
     });
+  }
+
+  private renderDefinitionHeader(): void {
+    if (!this.containerEl || this.definitionGroups.length === 0) return;
+
+    const currentGroup = this.definitionGroups[this.currentDefinitionIndex];
+    if (!currentGroup) return;
+
+    const headerEl = document.createElement("div");
+    headerEl.className = "synofinder-quick-header";
+
+    // Part of speech (if available)
+    if (currentGroup.partOfSpeech) {
+      const posSpan = document.createElement("span");
+      posSpan.className = "synofinder-quick-pos";
+      posSpan.textContent = currentGroup.partOfSpeech;
+      headerEl.appendChild(posSpan);
+    }
+
+    // Definition text (truncated) - only if there's a real definition
+    if (hasDisplayableDefinition(currentGroup)) {
+      const defText = getGroupDisplayDefinition(currentGroup);
+      const truncatedDef = defText.length > 40 ? defText.substring(0, 37) + "..." : defText;
+      const defSpan = document.createElement("span");
+      defSpan.className = "synofinder-quick-def";
+      defSpan.textContent = truncatedDef;
+      headerEl.appendChild(defSpan);
+    }
+
+    // Navigation indicator (only show if multiple groups)
+    if (this.definitionGroups.length > 1) {
+      const navSpan = document.createElement("span");
+      navSpan.className = "synofinder-quick-nav";
+      navSpan.textContent = `(${this.currentDefinitionIndex + 1}/${this.definitionGroups.length})`;
+      headerEl.appendChild(navSpan);
+    }
+
+    this.containerEl.appendChild(headerEl);
   }
 
   private getBadgeInfo(type: string): { cls: string; text: string } {
@@ -180,10 +266,22 @@ export class QuickReplaceSuggest {
         break;
 
       case "Enter":
-      case "Tab":
         e.preventDefault();
         e.stopPropagation();
         this.selectSuggestion(this.selectedIndex);
+        break;
+
+      case "Tab":
+        e.preventDefault();
+        e.stopPropagation();
+        // If multiple definitions, Tab cycles through them
+        if (this.definitionGroups.length > 1) {
+          const direction = e.shiftKey ? -1 : 1;
+          this.cycleDefinition(direction);
+        } else {
+          // Single definition or no grouping - Tab selects
+          this.selectSuggestion(this.selectedIndex);
+        }
         break;
 
       case "Escape":
@@ -206,6 +304,69 @@ export class QuickReplaceSuggest {
         break;
       }
     }
+  }
+
+  private cycleDefinition(direction: 1 | -1): void {
+    if (this.definitionGroups.length <= 1) return;
+
+    // Calculate new index with wrap-around
+    let newIndex = this.currentDefinitionIndex + direction;
+    if (newIndex < 0) {
+      newIndex = this.definitionGroups.length - 1;
+    } else if (newIndex >= this.definitionGroups.length) {
+      newIndex = 0;
+    }
+
+    this.currentDefinitionIndex = newIndex;
+    this.updateSuggestionsForCurrentDefinition();
+    this.selectedIndex = 0;
+    this.renderSuggestions();
+  }
+
+  private handleTouchStart(e: TouchEvent): void {
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    this.touchStartX = touch.clientX;
+    this.touchStartY = touch.clientY;
+    this.isSwiping = false;
+  }
+
+  private handleTouchMove(e: TouchEvent): void {
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+
+    const deltaX = touch.clientX - this.touchStartX;
+    const deltaY = touch.clientY - this.touchStartY;
+
+    // Determine if this is a horizontal swipe
+    if (!this.isSwiping && Math.abs(deltaX) > 10) {
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        this.isSwiping = true;
+        e.preventDefault();
+      }
+    }
+
+    if (this.isSwiping) {
+      e.preventDefault();
+    }
+  }
+
+  private handleTouchEnd(e: TouchEvent): void {
+    const touch = e.changedTouches[0];
+    if (!touch) return;
+
+    const deltaX = touch.clientX - this.touchStartX;
+    const swipeThreshold = 50;
+
+    if (this.isSwiping && Math.abs(deltaX) >= swipeThreshold && this.definitionGroups.length > 1) {
+      // Swipe left = next definition, swipe right = previous definition
+      const direction: 1 | -1 = deltaX < 0 ? 1 : -1;
+      this.cycleDefinition(direction);
+    }
+
+    this.isSwiping = false;
   }
 
   private handleClickOutside(e: MouseEvent): void {
@@ -236,5 +397,9 @@ export class QuickReplaceSuggest {
     this.context = null;
     this.suggestions = [];
     this.selectedIndex = 0;
+    // Reset definition grouping state
+    this.definitionGroups = [];
+    this.ungroupedResults = [];
+    this.currentDefinitionIndex = 0;
   }
 }

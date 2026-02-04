@@ -61,11 +61,13 @@ export class MerriamWebsterService implements SynonymService {
 
     for (const entry of entries) {
       const partOfSpeech = entry.fl;
-      const definition = entry.shortdef?.[0];
+      const entryId = entry.meta?.id || "unknown";
 
-      // Extract synonyms from meta.syns
+      // Extract synonyms from meta.syns (each synGroup corresponds to a shortdef)
       if (requestedTypes.includes("synonym") && entry.meta?.syns) {
-        for (const synGroup of entry.meta.syns) {
+        entry.meta.syns.forEach((synGroup, synGroupIndex) => {
+          const definition = entry.shortdef?.[synGroupIndex];
+          const defId = `mw-${entryId}-${synGroupIndex}`;
           for (const synonym of synGroup) {
             results.push({
               word: synonym,
@@ -73,14 +75,17 @@ export class MerriamWebsterService implements SynonymService {
               source: "merriam-webster",
               partOfSpeech,
               definition,
+              definitionId: defId,
             });
           }
-        }
+        });
       }
 
-      // Extract antonyms from meta.ants
+      // Extract antonyms from meta.ants (each antGroup corresponds to a shortdef)
       if (requestedTypes.includes("antonym") && entry.meta?.ants) {
-        for (const antGroup of entry.meta.ants) {
+        entry.meta.ants.forEach((antGroup, antGroupIndex) => {
+          const definition = entry.shortdef?.[antGroupIndex];
+          const defId = `mw-${entryId}-${antGroupIndex}`;
           for (const antonym of antGroup) {
             results.push({
               word: antonym,
@@ -88,9 +93,10 @@ export class MerriamWebsterService implements SynonymService {
               source: "merriam-webster",
               partOfSpeech,
               definition,
+              definitionId: defId,
             });
           }
-        }
+        });
       }
     }
 

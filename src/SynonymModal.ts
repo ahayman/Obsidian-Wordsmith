@@ -5,10 +5,13 @@ import {
   TabMetadata,
   TabState,
   RelationshipType,
+  GroupedResults,
+  DefinitionGroup,
 } from "./types";
 import SynoFinderPlugin from "./main";
 import { replaceWord } from "./utils/wordExtractor";
 import { createServiceIcon } from "./utils/serviceIcons";
+import { groupByDefinition, flattenVisibleResults, getGroupDisplayDefinition, hasDisplayableDefinition } from "./utils/definitionGrouping";
 
 // Labels for filter chips
 const TYPE_LABELS: Record<RelationshipType, string> = {
@@ -45,6 +48,12 @@ export class SynonymModal extends Modal {
   private selectedIndex: number = 0;
   private filteredResults: SynonymResult[] = [];
   private ignoreMouseUntilMove: boolean = true;
+
+  // Definition grouping state
+  private groupedResults: GroupedResults | null = null;
+  private expandedGroups: Set<string> = new Set();
+  private visibleFlatResults: SynonymResult[] = [];
+  private readonly MAX_PER_GROUP = 5;
 
   // Swipe detection
   private touchStartX: number = 0;
@@ -213,7 +222,7 @@ export class SynonymModal extends Modal {
 
     this.scope.register([], "Enter", (e) => {
       e.preventDefault();
-      const selected = this.filteredResults[this.selectedIndex];
+      const selected = this.visibleFlatResults[this.selectedIndex];
       if (selected) {
         this.selectResult(selected);
       }
@@ -434,9 +443,20 @@ export class SynonymModal extends Modal {
       });
     }
 
+    // Group results by definition
+    this.groupedResults = groupByDefinition(this.filteredResults);
+
+    // Build visible flat results for keyboard navigation
+    this.visibleFlatResults = flattenVisibleResults(
+      this.groupedResults.grouped,
+      this.groupedResults.ungrouped,
+      this.expandedGroups,
+      this.MAX_PER_GROUP
+    );
+
     // Reset selection if out of bounds
-    if (this.selectedIndex >= this.filteredResults.length) {
-      this.selectedIndex = Math.max(0, this.filteredResults.length - 1);
+    if (this.selectedIndex >= this.visibleFlatResults.length) {
+      this.selectedIndex = Math.max(0, this.visibleFlatResults.length - 1);
     }
   }
 
@@ -452,7 +472,7 @@ export class SynonymModal extends Modal {
     }
 
     // Show empty state if no results after filtering
-    if (this.filteredResults.length === 0) {
+    if (this.visibleFlatResults.length === 0) {
       const emptyEl = this.resultsContainerEl.createDiv({ cls: "synofinder-empty" });
       emptyEl.setText("No results found");
       return;
@@ -467,25 +487,22 @@ export class SynonymModal extends Modal {
       { once: true }
     );
 
-    for (let i = 0; i < this.filteredResults.length; i++) {
-      const result = this.filteredResults[i];
-      if (!result) continue;
+    // Track current flat index for keyboard navigation
+    let flatIndex = 0;
 
-      const itemEl = this.resultsContainerEl.createDiv({
-        cls: `synofinder-suggestion ${i === this.selectedIndex ? "is-selected" : ""}`,
-      });
+    // Render grouped results
+    if (this.groupedResults) {
+      for (const group of this.groupedResults.grouped) {
+        flatIndex = this.renderDefinitionGroup(group, flatIndex);
+      }
 
-      this.renderSuggestion(result, itemEl);
-
-      itemEl.addEventListener("click", () => {
-        this.selectResult(result);
-      });
-
-      itemEl.addEventListener("mouseenter", () => {
-        if (this.ignoreMouseUntilMove) return;
-        this.selectedIndex = i;
-        this.updateSelectionStyles();
-      });
+      // Render ungrouped results (if any)
+      if (this.groupedResults.ungrouped.length > 0) {
+        for (const result of this.groupedResults.ungrouped) {
+          this.renderResultItem(result, flatIndex);
+          flatIndex++;
+        }
+      }
     }
 
     // Scroll selected item into view
@@ -493,6 +510,113 @@ export class SynonymModal extends Modal {
     if (selectedEl) {
       selectedEl.scrollIntoView({ block: "nearest" });
     }
+  }
+
+  private renderDefinitionGroup(group: DefinitionGroup, startIndex: number): number {
+    const isExpanded = this.expandedGroups.has(group.definitionId);
+    const hasMore = group.results.length > this.MAX_PER_GROUP;
+    const visibleCount = isExpanded ? group.results.length : Math.min(group.results.length, this.MAX_PER_GROUP);
+
+    // Render definition header
+    const headerEl = this.resultsContainerEl.createDiv({ cls: "synofinder-def-header" });
+
+    // Part of speech badge (if available)
+    if (group.partOfSpeech) {
+      headerEl.createSpan({ cls: "synofinder-def-pos", text: group.partOfSpeech });
+    }
+
+    // Definition text (only if there's a real definition)
+    if (hasDisplayableDefinition(group)) {
+      const defText = getGroupDisplayDefinition(group);
+      const truncatedDef = defText.length > 60 ? defText.substring(0, 57) + "..." : defText;
+      headerEl.createSpan({ cls: "synofinder-def-text", text: truncatedDef });
+    }
+
+    // Result count
+    headerEl.createSpan({ cls: "synofinder-def-count", text: `(${group.results.length})` });
+
+    // Render visible results for this group
+    let flatIndex = startIndex;
+    for (let i = 0; i < visibleCount; i++) {
+      const result = group.results[i];
+      if (!result) continue;
+      this.renderResultItem(result, flatIndex, true);
+      flatIndex++;
+    }
+
+    // Show More button
+    if (hasMore && !isExpanded) {
+      const showMoreEl = this.resultsContainerEl.createDiv({ cls: "synofinder-show-more" });
+      const remaining = group.results.length - this.MAX_PER_GROUP;
+      showMoreEl.setText(`Show ${remaining} more`);
+      showMoreEl.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.expandedGroups.add(group.definitionId);
+        this.updateFilteredResults();
+        this.renderResults();
+      });
+    } else if (hasMore && isExpanded) {
+      // Show Less button when expanded
+      const showLessEl = this.resultsContainerEl.createDiv({ cls: "synofinder-show-more" });
+      showLessEl.setText("Show less");
+      showLessEl.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.expandedGroups.delete(group.definitionId);
+        this.updateFilteredResults();
+        this.renderResults();
+      });
+    }
+
+    return flatIndex;
+  }
+
+  private renderResultItem(result: SynonymResult, flatIndex: number, inGroup: boolean = false): void {
+    const itemEl = this.resultsContainerEl.createDiv({
+      cls: `synofinder-suggestion ${flatIndex === this.selectedIndex ? "is-selected" : ""} ${inGroup ? "synofinder-grouped-item" : ""}`,
+    });
+
+    // Use compact rendering for grouped items (no definition shown - it's in header)
+    if (inGroup) {
+      this.renderSuggestionCompact(result, itemEl);
+    } else {
+      this.renderSuggestion(result, itemEl);
+    }
+
+    itemEl.addEventListener("click", () => {
+      this.selectResult(result);
+    });
+
+    itemEl.addEventListener("mouseenter", () => {
+      if (this.ignoreMouseUntilMove) return;
+      this.selectedIndex = flatIndex;
+      this.updateSelectionStyles();
+    });
+  }
+
+  private renderSuggestionCompact(item: SynonymResult, el: HTMLElement): void {
+    const container = el.createDiv({ cls: "synofinder-suggestion-content" });
+    const mainRow = container.createDiv({ cls: "synofinder-suggestion-main" });
+
+    mainRow.createSpan({ cls: "synofinder-word", text: item.word });
+
+    const badgeMap: Record<string, { cls: string; text: string }> = {
+      synonym: { cls: "synofinder-badge-syn", text: "Syn" },
+      antonym: { cls: "synofinder-badge-ant", text: "Ant" },
+      related: { cls: "synofinder-badge-rel", text: "Rel" },
+      hypernym: { cls: "synofinder-badge-hyper", text: "Hyper" },
+      hyponym: { cls: "synofinder-badge-hypo", text: "Hypo" },
+      spelling: { cls: "synofinder-badge-spell", text: "Spell" },
+    };
+    const badge = badgeMap[item.type] || badgeMap["related"]!;
+    mainRow.createSpan({ cls: `synofinder-badge ${badge.cls}`, text: badge.text });
+
+    // No part of speech shown (already in header)
+
+    const sourceLabel = this.getSourceLabel(item.source);
+    const sourceClass = `synofinder-source-${this.sanitizeClassName(item.source)}`;
+    mainRow.createSpan({ cls: `synofinder-source ${sourceClass}`, text: sourceLabel });
+
+    // No definition shown (already in header)
   }
 
   private renderLoading(): void {
@@ -609,7 +733,7 @@ export class SynonymModal extends Modal {
   private moveSelection(direction: number): void {
     const newIndex = this.selectedIndex + direction;
 
-    if (newIndex >= 0 && newIndex < this.filteredResults.length) {
+    if (newIndex >= 0 && newIndex < this.visibleFlatResults.length) {
       this.selectedIndex = newIndex;
       this.ignoreMouseUntilMove = true;
       this.updateSelectionStyles();

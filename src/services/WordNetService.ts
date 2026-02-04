@@ -154,6 +154,7 @@ export class WordNetService {
           source: "wordnet",
           partOfSpeech: entry.pos,
           definition: entry.desc.length > 0 ? entry.desc[0] : undefined,
+          definitionId: entry.wordnet_id,
         });
       }
     }

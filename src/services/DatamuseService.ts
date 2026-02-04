@@ -201,7 +201,13 @@ export class DatamuseService {
       const firstDef = item.defs[0];
       if (firstDef) {
         const defParts = firstDef.split("\t");
-        result.definition = defParts.length > 1 ? defParts[1] : defParts[0];
+        const defText = (defParts.length > 1 ? defParts[1] : defParts[0]) || "";
+        result.definition = defText;
+        // Generate definitionId from normalized definition text
+        if (defText) {
+          const normalizedDef = defText.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 30);
+          result.definitionId = `dm-${normalizedDef}`;
+        }
       }
     }
 

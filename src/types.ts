@@ -46,6 +46,7 @@ export interface SynonymResult {
   source: SynonymSource;
   partOfSpeech?: string;
   definition?: string;
+  definitionId?: string;  // Groups results with same definition
 }
 
 export interface LookupResult {
@@ -174,4 +175,17 @@ export interface StreamingLookupCallbacks {
 // Return type for streaming lookup (allows cancellation)
 export interface StreamingLookupHandle {
   cancel: () => void;
+}
+
+// Definition grouping types
+export interface DefinitionGroup {
+  definitionId: string;
+  definition: string;
+  partOfSpeech?: string;
+  results: SynonymResult[];
+}
+
+export interface GroupedResults {
+  grouped: DefinitionGroup[];
+  ungrouped: SynonymResult[];
 }

@@ -367,6 +367,65 @@
   line-height: 1.4;
 }
 
+/* Definition Group Styles */
+.synofinder-def-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 6px 12px;
+  margin-top: 8px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.synofinder-def-header:first-child {
+  margin-top: 0;
+  border-top: none;
+}
+
+.synofinder-def-pos {
+  font-size: 0.75em;
+  font-style: italic;
+  color: var(--text-muted);
+  background-color: var(--background-secondary);
+  padding: 2px 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.synofinder-def-text {
+  font-size: 0.85em;
+  font-style: italic;
+  color: var(--text-muted);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.synofinder-def-count {
+  font-size: 0.75em;
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+
+.synofinder-grouped-item {
+  padding-left: 16px;
+}
+
+.synofinder-show-more {
+  padding: 6px 12px 6px 16px;
+  font-size: 0.8em;
+  color: var(--interactive-accent);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.synofinder-show-more:hover {
+  color: var(--interactive-accent-hover);
+  text-decoration: underline;
+}
+
 /* Instructions */
 .synofinder-instructions {
   display: flex;
@@ -804,5 +863,42 @@ body.is-mobile .synofinder-tab {
   color: var(--text-muted);
   background-color: var(--background-secondary);
   border-radius: 3px;
+  flex-shrink: 0;
+}
+
+/* Quick Replace Definition Header */
+.synofinder-quick-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  margin-bottom: 4px;
+}
+
+.synofinder-quick-pos {
+  font-size: 0.7em;
+  font-style: italic;
+  color: var(--text-muted);
+  background-color: var(--background-secondary);
+  padding: 1px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.synofinder-quick-def {
+  font-size: 0.8em;
+  font-style: italic;
+  color: var(--text-muted);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.synofinder-quick-nav {
+  font-size: 0.75em;
+  color: var(--text-faint);
   flex-shrink: 0;
 }

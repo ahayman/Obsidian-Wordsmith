@@ -246,6 +246,7 @@ export class DataService {
       // Check cache for spelling
       const cached = this.cacheService.getService(word, "spelling");
       if (cached) {
+        // Spelling results don't have definitions to group by, limit to 5
         return cached.slice(0, 5);
       }
       const suggestions = await this.spellingService.getSuggestions(word);
@@ -254,6 +255,7 @@ export class DataService {
     }
 
     // Get results of requested type from first enabled source that supports it
+    // Return all results so QuickReplaceSuggest can group by definition and slice per group
     const enabledSources = this.getEnabledSources();
     const requestedTypes: RelationshipType[] = [type];
 
@@ -265,19 +267,19 @@ export class DataService {
         if (source.id === "local") {
           const cached = this.cacheService.getServiceForTypes(word, "local", requestedTypes);
           if (cached) {
-            return cached.slice(0, 5);
+            return cached;
           }
           const results = this.lookupLocal(word);
           this.cacheService.setService(word, "local", results, ["synonym", "related"]);
-          return results.filter(r => r.type === type).slice(0, 5);
+          return results.filter(r => r.type === type);
         } else if (source.id === "datamuse") {
           const cached = this.cacheService.getServiceForTypes(word, "datamuse", requestedTypes);
           if (cached) {
-            return cached.slice(0, 5);
+            return cached;
           }
           const results = await this.lookupDatamuse(word, requestedTypes);
           this.cacheService.setService(word, "datamuse", results, requestedTypes);
-          return results.filter(r => r.type === type).slice(0, 5);
+          return results.filter(r => r.type === type);
         }
       } else if (isAPISource(source)) {
         const serviceInfo = getAPIServiceInfo(source.config.type);
@@ -285,13 +287,13 @@ export class DataService {
 
         const cached = this.cacheService.getServiceForTypes(word, source.id, requestedTypes);
         if (cached) {
-          return cached.slice(0, 5);
+          return cached;
         }
         const service = this.apiServices.get(source.id);
         if (service) {
           const results = await this.lookupAPIService(service, word, requestedTypes);
           this.cacheService.setService(word, source.id, results, requestedTypes);
-          return results.filter(r => r.type === type).slice(0, 5);
+          return results.filter(r => r.type === type);
         }
       }
     }

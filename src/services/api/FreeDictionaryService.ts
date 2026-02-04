@@ -39,8 +39,9 @@ export class FreeDictionaryService implements SynonymService {
     const results: SynonymResult[] = [];
 
     for (const entry of data) {
+      let meaningIndex = 0;
       for (const meaning of entry.meanings) {
-        // Top-level synonyms for this part of speech
+        // Top-level synonyms for this part of speech (no specific definition)
         if (requestedTypes.includes("synonym") && meaning.synonyms) {
           for (const synonym of meaning.synonyms) {
             results.push({
@@ -48,11 +49,12 @@ export class FreeDictionaryService implements SynonymService {
               type: "synonym",
               source: "free-dictionary",
               partOfSpeech: meaning.partOfSpeech,
+              definitionId: `fd-${meaning.partOfSpeech}-${meaningIndex}`,
             });
           }
         }
 
-        // Top-level antonyms for this part of speech
+        // Top-level antonyms for this part of speech (no specific definition)
         if (requestedTypes.includes("antonym") && meaning.antonyms) {
           for (const antonym of meaning.antonyms) {
             results.push({
@@ -60,12 +62,16 @@ export class FreeDictionaryService implements SynonymService {
               type: "antonym",
               source: "free-dictionary",
               partOfSpeech: meaning.partOfSpeech,
+              definitionId: `fd-${meaning.partOfSpeech}-${meaningIndex}`,
             });
           }
         }
 
         // Synonyms and antonyms from definitions
+        let defIndex = 0;
         for (const def of meaning.definitions) {
+          const defId = `fd-${meaning.partOfSpeech}-${meaningIndex}-${defIndex}`;
+
           if (requestedTypes.includes("synonym") && def.synonyms) {
             for (const synonym of def.synonyms) {
               results.push({
@@ -74,6 +80,7 @@ export class FreeDictionaryService implements SynonymService {
                 source: "free-dictionary",
                 partOfSpeech: meaning.partOfSpeech,
                 definition: def.definition,
+                definitionId: defId,
               });
             }
           }
@@ -86,10 +93,13 @@ export class FreeDictionaryService implements SynonymService {
                 source: "free-dictionary",
                 partOfSpeech: meaning.partOfSpeech,
                 definition: def.definition,
+                definitionId: defId,
               });
             }
           }
+          defIndex++;
         }
+        meaningIndex++;
       }
     }
 
