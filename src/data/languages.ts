@@ -1,5 +1,6 @@
 import { LanguageCode, LanguageInfo } from "../types/language";
-import { APIServiceType, BuiltinTabId } from "../types/types";
+import { APIServiceType, BuiltinTabId, WordsmithSettings } from "../types/types";
+import { OMWLanguageCode, OMW_TO_WORDSMITH } from "../types/omwLanguage";
 
 // All supported languages with their metadata
 export const SUPPORTED_LANGUAGES: LanguageInfo[] = [
@@ -25,11 +26,31 @@ export const SUPPORTED_LANGUAGES: LanguageInfo[] = [
   { code: "sk", name: "Slovak", nativeName: "Slovenčina" },
 ];
 
-// Language support per built-in service
+// Base language support per built-in service (without OMW)
 export const BUILTIN_SERVICE_LANGUAGES: Record<BuiltinTabId, LanguageCode[]> = {
-  local: ["en"],  // WordNet + Moby are English only
+  local: ["en"],  // WordNet + Moby are English only (OMW adds more dynamically)
   datamuse: ["en", "es"],  // Datamuse supports English and Spanish vocabulary
 };
+
+/**
+ * Get languages supported by the local service, including downloaded OMW languages.
+ */
+export function getLocalServiceLanguages(settings?: WordsmithSettings): LanguageCode[] {
+  const languages = new Set<LanguageCode>(["en"]); // Always include English (WordNet/Moby)
+
+  if (settings?.omwDownloaded) {
+    for (const [omwLang, isDownloaded] of Object.entries(settings.omwDownloaded)) {
+      if (isDownloaded) {
+        const wordsmithLang = OMW_TO_WORDSMITH[omwLang as OMWLanguageCode];
+        if (wordsmithLang) {
+          languages.add(wordsmithLang);
+        }
+      }
+    }
+  }
+
+  return Array.from(languages);
+}
 
 // Language support per API service type
 export const API_SERVICE_LANGUAGES: Record<APIServiceType, LanguageCode[]> = {
@@ -72,10 +93,27 @@ export function getLanguagesForService(serviceId: string): LanguageCode[] {
 
 /**
  * Check if a service supports a given language.
+ * For the "local" service, this only checks static support (WordNet/Moby).
+ * Use serviceSupportsLanguageWithSettings for dynamic OMW support.
  */
 export function serviceSupportsLanguage(serviceId: string, language: LanguageCode): boolean {
   const languages = SERVICE_LANGUAGE_SUPPORT[serviceId];
   return languages ? languages.includes(language) : false;
+}
+
+/**
+ * Check if a service supports a given language, including dynamic OMW support for local.
+ */
+export function serviceSupportsLanguageWithSettings(
+  serviceId: string,
+  language: LanguageCode,
+  settings?: WordsmithSettings
+): boolean {
+  if (serviceId === "local") {
+    const localLanguages = getLocalServiceLanguages(settings);
+    return localLanguages.includes(language);
+  }
+  return serviceSupportsLanguage(serviceId, language);
 }
 
 /**

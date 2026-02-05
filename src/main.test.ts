@@ -218,6 +218,7 @@ describe("WordsmithPlugin", () => {
           language: "default",
           fallbackLanguage: "en",
           frontmatterProperty: "lang",
+          omwDownloaded: {},
         };
 
         loadDataMock.mockResolvedValue(newSettings);
@@ -706,6 +707,7 @@ describe("WordsmithPlugin", () => {
         language: "default" as const,
         fallbackLanguage: "en" as const,
         frontmatterProperty: "lang",
+        omwDownloaded: {},
       };
 
       loadDataMock.mockResolvedValue(newSettings);
@@ -810,6 +812,7 @@ describe("WordsmithPlugin", () => {
         language: "default" as const,
         fallbackLanguage: "en" as const,
         frontmatterProperty: "lang",
+        omwDownloaded: {},
       };
 
       loadDataMock.mockResolvedValue(settings);
@@ -874,6 +877,7 @@ describe("WordsmithPlugin", () => {
         language: "default" as const,
         fallbackLanguage: "en" as const,
         frontmatterProperty: "lang",
+        omwDownloaded: {},
       };
 
       loadDataMock.mockResolvedValue(settings);

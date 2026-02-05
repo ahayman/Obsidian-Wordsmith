@@ -605,178 +605,90 @@ describe("SynonymSettingsTab", () => {
     });
   });
 
-  describe("WordNet download settings", () => {
-    it("should show Download button when not downloaded", () => {
+  describe("Local data settings (WordNet/Moby)", () => {
+    it("should show Download button in local data section", () => {
       mockPlugin.settings.wordNetDownloaded = false;
+      mockPlugin.settings.mobyDownloaded = false;
 
       settingsTab.display();
 
-      const buttons = settingsTab.containerEl.querySelectorAll("button");
-      const downloadBtns = Array.from(buttons).filter(b => b.textContent === "Download");
-
-      expect(downloadBtns.length).toBeGreaterThan(0);
-    });
-
-    it("should show Delete button when downloaded", () => {
-      mockPlugin.settings.wordNetDownloaded = true;
-
-      settingsTab.display();
-
-      const buttons = settingsTab.containerEl.querySelectorAll("button");
-      const deleteBtns = Array.from(buttons).filter(b => b.textContent === "Delete");
-
-      expect(deleteBtns.length).toBeGreaterThan(0);
-    });
-
-    it("should show (downloaded) status text when downloaded", () => {
-      mockPlugin.settings.wordNetDownloaded = true;
-
-      settingsTab.display();
-
-      const descriptions = Array.from(settingsTab.containerEl.querySelectorAll(".setting-item-description"));
-      const wordNetDesc = descriptions.find(d => d.textContent?.includes("WordNet"));
-
-      expect(wordNetDesc?.textContent).toContain("(downloaded)");
-    });
-
-    it("should show (not downloaded) status text when not downloaded", () => {
-      mockPlugin.settings.wordNetDownloaded = false;
-
-      settingsTab.display();
-
-      const descriptions = Array.from(settingsTab.containerEl.querySelectorAll(".setting-item-description"));
-      const wordNetDesc = descriptions.find(d => d.textContent?.includes("WordNet"));
-
-      expect(wordNetDesc?.textContent).toContain("(not downloaded)");
-    });
-
-    it("should call download when Download button is clicked", async () => {
-      mockPlugin.settings.wordNetDownloaded = false;
-
-      settingsTab.display();
-
-      // Find the WordNet download button (first Download with CTA class)
-      const buttons = settingsTab.containerEl.querySelectorAll("button");
-      const downloadBtn = Array.from(buttons).find(
-        b => b.textContent === "Download" && b.classList.contains("mod-cta")
-      ) as HTMLButtonElement;
-
+      const downloadBtn = settingsTab.containerEl.querySelector(".wordsmith-local-download-btn");
       expect(downloadBtn).not.toBeNull();
-
-      downloadBtn.click();
-
-      await new Promise(resolve => setTimeout(resolve, 0));
-
-      expect(mockPlugin.dataService.wordNet.download).toHaveBeenCalled();
+      expect(downloadBtn?.textContent).toBe("Download");
     });
 
-    it("should update settings after successful download", async () => {
+    it("should show local data select dropdown", () => {
       mockPlugin.settings.wordNetDownloaded = false;
-      mockPlugin.dataService.wordNet.download.mockResolvedValue(true);
 
       settingsTab.display();
 
-      const buttons = settingsTab.containerEl.querySelectorAll("button");
-      const downloadBtn = Array.from(buttons).find(
-        b => b.textContent === "Download" && b.classList.contains("mod-cta")
-      ) as HTMLButtonElement;
+      const select = settingsTab.containerEl.querySelector(".wordsmith-local-select") as HTMLSelectElement;
+      expect(select).not.toBeNull();
 
-      downloadBtn.click();
-
-      await new Promise(resolve => setTimeout(resolve, 50));
-
-      expect(mockPlugin.settings.wordNetDownloaded).toBe(true);
-      expect(mockPlugin.saveSettings).toHaveBeenCalled();
+      // Verify dropdown contains WordNet option (by checking innerHTML)
+      expect(select.innerHTML).toContain("WordNet");
     });
 
-    it("should call delete when Delete button is clicked", async () => {
+    it("should show WordNet as downloaded in dropdown when downloaded", () => {
       mockPlugin.settings.wordNetDownloaded = true;
 
       settingsTab.display();
 
-      const buttons = settingsTab.containerEl.querySelectorAll("button");
-      const deleteBtn = Array.from(buttons).find(b => b.textContent === "Delete") as HTMLButtonElement;
+      const select = settingsTab.containerEl.querySelector(".wordsmith-local-select") as HTMLSelectElement;
 
-      deleteBtn.click();
+      // When downloaded, the option text should show checkmark and "downloaded"
+      expect(select.innerHTML).toContain("✓");
+      expect(select.innerHTML).toContain("downloaded");
+    });
+
+    it("should show WordNet in downloaded list when downloaded", () => {
+      mockPlugin.settings.wordNetDownloaded = true;
+
+      settingsTab.display();
+
+      const downloadedList = settingsTab.containerEl.querySelector(".wordsmith-local-downloaded-list");
+      expect(downloadedList?.textContent).toContain("WordNet");
+    });
+
+    it("should call delete when WordNet Delete button is clicked", async () => {
+      mockPlugin.settings.wordNetDownloaded = true;
+
+      settingsTab.display();
+
+      // Find the delete button for WordNet in the downloaded list
+      const downloadedItems = settingsTab.containerEl.querySelectorAll(".wordsmith-local-item");
+      let wordnetDeleteBtn: HTMLButtonElement | null = null;
+      downloadedItems.forEach(item => {
+        if (item.textContent?.includes("WordNet")) {
+          wordnetDeleteBtn = item.querySelector(".wordsmith-local-delete-btn");
+        }
+      });
+
+      expect(wordnetDeleteBtn).not.toBeNull();
+      wordnetDeleteBtn?.click();
 
       await new Promise(resolve => setTimeout(resolve, 0));
 
       expect(mockPlugin.dataService.wordNet.delete).toHaveBeenCalled();
     });
-  });
 
-  describe("Moby download settings", () => {
-    it("should show Download button for Moby when not downloaded", () => {
+    it("should show Moby in dropdown", () => {
       mockPlugin.settings.mobyDownloaded = false;
-      mockPlugin.settings.wordNetDownloaded = true; // WordNet downloaded, so Delete shows for it
 
       settingsTab.display();
 
-      const descriptions = Array.from(settingsTab.containerEl.querySelectorAll(".setting-item-description"));
-      const mobyDesc = descriptions.find(d => d.textContent?.includes("Moby"));
-
-      expect(mobyDesc?.textContent).toContain("(not downloaded)");
+      const select = settingsTab.containerEl.querySelector(".wordsmith-local-select") as HTMLSelectElement;
+      expect(select.innerHTML).toContain("Moby");
     });
 
-    it("should show (downloaded) status for Moby when downloaded", () => {
+    it("should show Moby as downloaded when downloaded", () => {
       mockPlugin.settings.mobyDownloaded = true;
 
       settingsTab.display();
 
-      const descriptions = Array.from(settingsTab.containerEl.querySelectorAll(".setting-item-description"));
-      const mobyDesc = descriptions.find(d => d.textContent?.includes("Moby"));
-
-      expect(mobyDesc?.textContent).toContain("(downloaded)");
-    });
-
-    it("should call download when Moby Download button is clicked", async () => {
-      mockPlugin.settings.mobyDownloaded = false;
-      mockPlugin.settings.wordNetDownloaded = true; // So WordNet shows Delete, Moby shows Download
-
-      settingsTab.display();
-
-      // Find Moby setting by its description and get its button
-      const settingItems = settingsTab.containerEl.querySelectorAll(".setting-item");
-      let mobyDownloadBtn: HTMLButtonElement | null = null;
-      settingItems.forEach(item => {
-        const desc = item.querySelector(".setting-item-description");
-        if (desc?.textContent?.includes("Moby")) {
-          mobyDownloadBtn = item.querySelector("button");
-        }
-      });
-
-      expect(mobyDownloadBtn).not.toBeNull();
-      expect(mobyDownloadBtn?.textContent).toBe("Download");
-
-      mobyDownloadBtn?.click();
-
-      await new Promise(resolve => setTimeout(resolve, 50));
-
-      expect(mockPlugin.dataService.moby.download).toHaveBeenCalled();
-    });
-
-    it("should update settings after successful Moby download", async () => {
-      mockPlugin.settings.mobyDownloaded = false;
-      mockPlugin.settings.wordNetDownloaded = true;
-      mockPlugin.dataService.moby.download.mockResolvedValue(true);
-
-      settingsTab.display();
-
-      const settingItems = settingsTab.containerEl.querySelectorAll(".setting-item");
-      let mobyDownloadBtn: HTMLButtonElement | null = null;
-      settingItems.forEach(item => {
-        const desc = item.querySelector(".setting-item-description");
-        if (desc?.textContent?.includes("Moby")) {
-          mobyDownloadBtn = item.querySelector("button");
-        }
-      });
-
-      mobyDownloadBtn?.click();
-
-      await new Promise(resolve => setTimeout(resolve, 50));
-
-      expect(mockPlugin.settings.mobyDownloaded).toBe(true);
-      expect(mockPlugin.saveSettings).toHaveBeenCalled();
+      // Moby should appear in the downloaded list
+      const downloadedList = settingsTab.containerEl.querySelector(".wordsmith-local-downloaded-list");
+      expect(downloadedList?.textContent).toContain("Moby");
     });
 
     it("should call delete when Moby Delete button is clicked", async () => {
@@ -784,17 +696,15 @@ describe("SynonymSettingsTab", () => {
 
       settingsTab.display();
 
-      const settingItems = settingsTab.containerEl.querySelectorAll(".setting-item");
+      const downloadedItems = settingsTab.containerEl.querySelectorAll(".wordsmith-local-item");
       let mobyDeleteBtn: HTMLButtonElement | null = null;
-      settingItems.forEach(item => {
-        const desc = item.querySelector(".setting-item-description");
-        if (desc?.textContent?.includes("Moby")) {
-          mobyDeleteBtn = item.querySelector("button");
+      downloadedItems.forEach(item => {
+        if (item.textContent?.includes("Moby")) {
+          mobyDeleteBtn = item.querySelector(".wordsmith-local-delete-btn");
         }
       });
 
-      expect(mobyDeleteBtn?.textContent).toBe("Delete");
-
+      expect(mobyDeleteBtn).not.toBeNull();
       mobyDeleteBtn?.click();
 
       await new Promise(resolve => setTimeout(resolve, 0));

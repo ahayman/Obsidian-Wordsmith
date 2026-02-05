@@ -1,6 +1,7 @@
 import { Editor, MarkdownFileInfo, MarkdownView, Notice, Plugin } from "obsidian";
 import { WordsmithSettings, DEFAULT_SETTINGS, SourceConfig, LookupCache, RelationshipType } from "./types/types";
 import { LanguageCode } from "./types/language";
+import { OMWLanguageCode } from "./types/omwLanguage";
 import { getLanguageName } from "./data/languages";
 import { DataService } from "./services/DataService";
 import { SynonymModal } from "./components/SynonymModal";
@@ -47,6 +48,7 @@ function migrateSettings(old: OldSettings): WordsmithSettings {
     language: DEFAULT_SETTINGS.language,
     fallbackLanguage: DEFAULT_SETTINGS.fallbackLanguage,
     frontmatterProperty: DEFAULT_SETTINGS.frontmatterProperty,
+    omwDownloaded: DEFAULT_SETTINGS.omwDownloaded,
   };
 }
 
@@ -99,12 +101,30 @@ function needsLanguageMigration(data: unknown): boolean {
          (obj.language === undefined || obj.fallbackLanguage === undefined || obj.frontmatterProperty === undefined);
 }
 
+function needsOMWMigration(data: unknown): boolean {
+  if (!data || typeof data !== "object") return false;
+  const obj = data as Record<string, unknown>;
+  // Check if it has the new format but missing omwDownloaded field
+  return obj.sources !== undefined &&
+         Array.isArray(obj.sources) &&
+         obj.sources.length > 0 &&
+         "kind" in (obj.sources[0] as Record<string, unknown>) &&
+         obj.omwDownloaded === undefined;
+}
+
 function addLanguageFields(data: Record<string, unknown>): WordsmithSettings {
   return {
     ...data,
     language: (data.language as string) ?? DEFAULT_SETTINGS.language,
     fallbackLanguage: (data.fallbackLanguage as LanguageCode) ?? DEFAULT_SETTINGS.fallbackLanguage,
     frontmatterProperty: (data.frontmatterProperty as string) ?? DEFAULT_SETTINGS.frontmatterProperty,
+  } as WordsmithSettings;
+}
+
+function addOMWFields(data: Record<string, unknown>): WordsmithSettings {
+  return {
+    ...data,
+    omwDownloaded: (data.omwDownloaded as Partial<Record<OMWLanguageCode, boolean>>) ?? DEFAULT_SETTINGS.omwDownloaded,
   } as WordsmithSettings;
 }
 
@@ -218,6 +238,10 @@ export default class WordsmithPlugin extends Plugin {
     } else if (needsLanguageMigration(loadedData)) {
       // Migrate settings that are missing language fields
       this.settings = addLanguageFields(loadedData as Record<string, unknown>);
+      await this.saveData(this.settings);
+    } else if (needsOMWMigration(loadedData)) {
+      // Migrate settings that are missing OMW fields
+      this.settings = addOMWFields(loadedData as Record<string, unknown>);
       await this.saveData(this.settings);
     } else if (loadedData && typeof loadedData === "object") {
       this.settings = Object.assign(

@@ -1,5 +1,6 @@
 import { Editor, EditorPosition } from "obsidian";
 import { LanguageCode, LanguageSetting } from "./language";
+import { OMWLanguageCode } from "./omwLanguage";
 
 // Relationship types for word lookups
 export type RelationshipType = "synonym" | "antonym" | "related" | "hypernym" | "hyponym";
@@ -21,7 +22,7 @@ export type APIServiceType =
 export type TabId = string;
 
 // Source types for SynonymResult
-export type SynonymSource = "wordnet" | "moby" | "datamuse" | "nspell" | APIServiceType;
+export type SynonymSource = "wordnet" | "moby" | "datamuse" | "nspell" | "omw" | APIServiceType;
 
 export const TAB_LABELS: Record<BuiltinTabId, string> = {
   local: "Local",
@@ -111,6 +112,8 @@ export interface WordsmithSettings {
   language: LanguageSetting;           // default: "default" (use Obsidian locale)
   fallbackLanguage: LanguageCode;      // default: "en" (used when auto-detect fails)
   frontmatterProperty: string;         // default: "lang" (frontmatter property name)
+  // OMW settings
+  omwDownloaded: Partial<Record<OMWLanguageCode, boolean>>;  // Track which OMW languages are downloaded
 }
 
 export const DEFAULT_SETTINGS: WordsmithSettings = {
@@ -132,6 +135,8 @@ export const DEFAULT_SETTINGS: WordsmithSettings = {
   language: "default",
   fallbackLanguage: "en",
   frontmatterProperty: "lang",
+  // OMW defaults
+  omwDownloaded: {},
 };
 
 // Helper functions for working with SourceConfig
@@ -197,4 +202,17 @@ export interface DefinitionGroup {
 export interface GroupedResults {
   grouped: DefinitionGroup[];
   ungrouped: SynonymResult[];
+}
+
+// OMW (Open Multilingual WordNet) types
+export interface OMWSynset {
+  id: string;        // Synset ID (e.g., "01148283-a")
+  pos: string;       // Part of speech (a=adjective, n=noun, v=verb, r=adverb)
+  lemmas: string[];  // Words in this synset
+  definition?: string;
+}
+
+export interface OMWIndex {
+  wordToSynsets: Map<string, string[]>;  // Word -> synset IDs
+  synsets: Map<string, OMWSynset>;       // Synset ID -> synset data
 }

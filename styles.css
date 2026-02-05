@@ -926,3 +926,100 @@ body.is-mobile .wordsmith-tab {
   color: var(--text-faint);
   flex-shrink: 0;
 }
+
+/* Local Data Settings */
+.wordsmith-local-desc {
+  margin-bottom: 12px;
+}
+
+.wordsmith-local-section-title {
+  font-weight: 500;
+  margin-bottom: 8px;
+  margin-top: 12px;
+}
+
+.wordsmith-local-downloaded-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.wordsmith-local-empty {
+  color: var(--text-muted);
+  font-size: 0.9em;
+  font-style: italic;
+  padding: 8px 0;
+}
+
+.wordsmith-local-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background-color: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+}
+
+.wordsmith-local-item-label {
+  font-size: 0.9em;
+  color: var(--text-normal);
+}
+
+.wordsmith-local-delete-btn {
+  padding: 4px 10px;
+  font-size: 0.8em;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: transparent;
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-muted);
+  transition: all 0.15s ease;
+}
+
+.wordsmith-local-delete-btn:hover {
+  background-color: rgba(var(--color-red-rgb), 0.15);
+  border-color: var(--color-red);
+  color: var(--color-red);
+}
+
+.wordsmith-local-add-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.wordsmith-local-select {
+  flex: 1;
+  font-size: 0.9em;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+}
+
+.wordsmith-local-download-btn {
+  padding: 8px 16px;
+  font-size: 0.9em;
+  border-radius: 6px;
+  cursor: pointer;
+  background-color: var(--interactive-accent);
+  border: none;
+  color: var(--text-on-accent);
+  transition: all 0.15s ease;
+}
+
+.wordsmith-local-download-btn:hover:not(:disabled) {
+  background-color: var(--interactive-accent-hover);
+}
+
+.wordsmith-local-download-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Downloaded option styling in dropdown */
+.wordsmith-option-downloaded {
+  color: var(--text-muted);
+}

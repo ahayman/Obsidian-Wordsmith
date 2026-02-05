@@ -10,6 +10,13 @@ import {
   RelationshipType,
 } from "../types/types";
 import { LanguageCode, LanguageSetting } from "../types/language";
+import {
+  OMWLanguageCode,
+  OMW_CORE_LANGUAGES,
+  OMW_EXTENDED_LANGUAGES,
+  getOMWLanguageInfo,
+  isOMWExtendedLanguage,
+} from "../types/omwLanguage";
 import { SUPPORTED_LANGUAGES, countServicesForLanguage, getLanguageName } from "../data/languages";
 import { AddAPIServiceModal } from "./AddAPIServiceModal";
 import { getAPIServiceInfo, BUILTIN_SERVICE_TYPES } from "../services/SynonymService";
@@ -87,10 +94,9 @@ export class SynonymSettingsTab extends PluginSettingTab {
 
     this.addCacheSettings(containerEl);
 
-    new Setting(containerEl).setName("Local data management").setHeading();
+    new Setting(containerEl).setName("Local data").setHeading();
 
-    this.addWordNetSetting(containerEl);
-    this.addMobySetting(containerEl);
+    this.addLocalDataSettings(containerEl);
 
     new Setting(containerEl).setName("Spelling suggestions").setHeading();
 
@@ -302,81 +308,268 @@ export class SynonymSettingsTab extends PluginSettingTab {
     this.display();
   }
 
-  private addWordNetSetting(containerEl: HTMLElement): void {
-    const isDownloaded = this.plugin.settings.wordNetDownloaded;
-    const statusText = isDownloaded ? " (downloaded)" : " (not downloaded)";
-
-    const wordNetSetting = new Setting(containerEl)
+  private addLocalDataSettings(containerEl: HTMLElement): void {
+    containerEl.createEl("p", {
+      cls: "setting-item-description wordsmith-local-desc",
       // eslint-disable-next-line obsidianmd/ui/sentence-case
-      .setName("WordNet data")
-      .setDesc("Download WordNet synonym database (~11MB)" + statusText);
+      text: "Download offline thesaurus data for local synonym lookups. Core English data provides comprehensive coverage; multilingual data uses Open Multilingual WordNet.",
+    });
 
-    wordNetSetting.addButton((button) => {
-      button.setButtonText(isDownloaded ? "Delete" : "Download");
-      if (!isDownloaded) {
-        button.setCta();
-      }
-      button.onClick(async () => {
-        if (isDownloaded) {
-          await this.plugin.dataService.wordNet.delete();
-          this.plugin.settings.wordNetDownloaded = false;
-          await this.plugin.saveSettings();
-          this.display();
-        } else {
-          button.setButtonText("Downloading...");
-          button.setDisabled(true);
+    // Downloaded languages section
+    const downloadedSection = containerEl.createDiv({ cls: "wordsmith-local-downloaded" });
+    downloadedSection.createEl("div", {
+      cls: "setting-item-name wordsmith-local-section-title",
+      text: "Downloaded data",
+    });
 
-          const success = await this.plugin.dataService.wordNet.download((progress) => {
-            button.setButtonText(`${progress.percent}%`);
-          });
+    const downloadedList = downloadedSection.createDiv({ cls: "wordsmith-local-downloaded-list" });
+    this.renderDownloadedItems(downloadedList);
 
-          if (success) {
-            this.plugin.settings.wordNetDownloaded = true;
-            await this.plugin.saveSettings();
-          }
+    // Add language selector
+    const addSection = containerEl.createDiv({ cls: "wordsmith-local-add" });
+    addSection.createEl("div", {
+      cls: "setting-item-name wordsmith-local-section-title",
+      text: "Add data",
+    });
 
-          this.display();
-        }
+    const addRow = addSection.createDiv({ cls: "wordsmith-local-add-row" });
+    this.renderLocalDataDropdown(addRow);
+  }
+
+  private renderDownloadedItems(containerEl: HTMLElement): void {
+    containerEl.empty();
+    const hasAnyDownloads = this.hasAnyLocalDataDownloaded();
+
+    if (!hasAnyDownloads) {
+      containerEl.createEl("div", {
+        cls: "wordsmith-local-empty",
+        text: "No data downloaded yet. Select from the list below to download.",
       });
+      return;
+    }
+
+    // Show downloaded Core English items
+    if (this.plugin.settings.wordNetDownloaded) {
+      this.renderDownloadedItem(containerEl, "wordnet", "WordNet", "English");
+    }
+    if (this.plugin.settings.mobyDownloaded) {
+      this.renderDownloadedItem(containerEl, "moby", "Moby Thesaurus", "English");
+    }
+
+    // Show downloaded OMW languages
+    const downloadedLangs = this.getDownloadedOMWLanguages();
+    for (const lang of downloadedLangs) {
+      const langInfo = getOMWLanguageInfo(lang);
+      if (!langInfo) continue;
+      const extendedIndicator = isOMWExtendedLanguage(lang) ? " [extended]" : "";
+      this.renderDownloadedItem(
+        containerEl,
+        `omw:${lang}`,
+        langInfo.name,
+        `${langInfo.nativeName}${extendedIndicator}`
+      );
+    }
+  }
+
+  private renderDownloadedItem(
+    containerEl: HTMLElement,
+    id: string,
+    name: string,
+    subtext: string
+  ): void {
+    const item = containerEl.createDiv({ cls: "wordsmith-local-item" });
+    const label = item.createSpan({ cls: "wordsmith-local-item-label" });
+    label.setText(`${name} (${subtext})`);
+
+    const deleteBtn = item.createEl("button", {
+      cls: "wordsmith-local-delete-btn",
+      text: "Delete",
+    });
+    deleteBtn.addEventListener("click", () => {
+      void this.deleteLocalData(id);
     });
   }
 
-  private addMobySetting(containerEl: HTMLElement): void {
-    const isDownloaded = this.plugin.settings.mobyDownloaded;
-    const statusText = isDownloaded ? " (downloaded)" : " (not downloaded)";
+  private hasAnyLocalDataDownloaded(): boolean {
+    if (this.plugin.settings.wordNetDownloaded) return true;
+    if (this.plugin.settings.mobyDownloaded) return true;
+    for (const isDownloaded of Object.values(this.plugin.settings.omwDownloaded)) {
+      if (isDownloaded) return true;
+    }
+    return false;
+  }
 
-    const mobySetting = new Setting(containerEl)
-      .setName("Moby thesaurus data")
-      .setDesc("Download Moby thesaurus database (~7.7MB)" + statusText);
+  private renderLocalDataDropdown(containerEl: HTMLElement): void {
+    const selectEl = containerEl.createEl("select", { cls: "wordsmith-local-select" });
+    selectEl.createEl("option", { value: "", text: "Select data to download..." });
 
-    mobySetting.addButton((button) => {
-      button.setButtonText(isDownloaded ? "Delete" : "Download");
-      if (!isDownloaded) {
-        button.setCta();
-      }
-      button.onClick(async () => {
-        if (isDownloaded) {
-          await this.plugin.dataService.moby.delete();
-          this.plugin.settings.mobyDownloaded = false;
-          await this.plugin.saveSettings();
-          this.display();
-        } else {
-          button.setButtonText("Downloading...");
-          button.setDisabled(true);
+    // Core English group
+    const coreEnglishGroup = selectEl.createEl("optgroup", { attr: { label: "Core English" } });
 
-          const success = await this.plugin.dataService.moby.download((progress) => {
-            button.setButtonText(`${progress.percent}%`);
-          });
-
-          if (success) {
-            this.plugin.settings.mobyDownloaded = true;
-            await this.plugin.saveSettings();
-          }
-
-          this.display();
-        }
-      });
+    // WordNet
+    const wordnetDownloaded = this.plugin.settings.wordNetDownloaded;
+    const wordnetOption = coreEnglishGroup.createEl("option", {
+      value: "wordnet",
+      text: wordnetDownloaded ? "✓ WordNet (English) - downloaded" : "WordNet (English) (~11 MB)",
     });
+    if (wordnetDownloaded) {
+      wordnetOption.disabled = true;
+      wordnetOption.addClass("wordsmith-option-downloaded");
+    }
+
+    // Moby
+    const mobyDownloaded = this.plugin.settings.mobyDownloaded;
+    const mobyOption = coreEnglishGroup.createEl("option", {
+      value: "moby",
+      text: mobyDownloaded ? "✓ Moby Thesaurus (English) - downloaded" : "Moby Thesaurus (English) (~7.7 MB)",
+    });
+    if (mobyDownloaded) {
+      mobyOption.disabled = true;
+      mobyOption.addClass("wordsmith-option-downloaded");
+    }
+
+    // Core OMW languages group
+    const coreGroup = selectEl.createEl("optgroup", { attr: { label: "Core languages (hand-curated)" } });
+    for (const lang of OMW_CORE_LANGUAGES) {
+      const isDownloaded = this.plugin.settings.omwDownloaded[lang.code];
+      const sizeText = lang.estimatedSizeMB ? ` (~${lang.estimatedSizeMB} MB)` : "";
+      const option = coreGroup.createEl("option", {
+        value: `omw:${lang.code}`,
+        text: isDownloaded
+          ? `✓ ${lang.name} (${lang.nativeName}) - downloaded`
+          : `${lang.name} (${lang.nativeName})${sizeText}`,
+      });
+      if (isDownloaded) {
+        option.disabled = true;
+        option.addClass("wordsmith-option-downloaded");
+      }
+    }
+
+    // Extended OMW languages group
+    const extGroup = selectEl.createEl("optgroup", { attr: { label: "Extended languages (auto-constructed)" } });
+    for (const lang of OMW_EXTENDED_LANGUAGES) {
+      const isDownloaded = this.plugin.settings.omwDownloaded[lang.code];
+      const sizeText = lang.estimatedSizeMB ? ` (~${lang.estimatedSizeMB} MB)` : "";
+      const option = extGroup.createEl("option", {
+        value: `omw:${lang.code}`,
+        text: isDownloaded
+          ? `✓ ${lang.name} (${lang.nativeName}) - downloaded`
+          : `${lang.name} (${lang.nativeName})${sizeText}`,
+      });
+      if (isDownloaded) {
+        option.disabled = true;
+        option.addClass("wordsmith-option-downloaded");
+      }
+    }
+
+    // Create download button
+    const downloadBtn = containerEl.createEl("button", {
+      cls: "wordsmith-local-download-btn",
+      text: "Download",
+    });
+    downloadBtn.disabled = true;
+
+    selectEl.addEventListener("change", () => {
+      downloadBtn.disabled = !selectEl.value;
+    });
+
+    downloadBtn.addEventListener("click", () => {
+      const selected = selectEl.value;
+      if (!selected) return;
+
+      void this.downloadLocalData(selected, downloadBtn, selectEl);
+    });
+  }
+
+  private getDownloadedOMWLanguages(): OMWLanguageCode[] {
+    const downloaded: OMWLanguageCode[] = [];
+    for (const [lang, isDownloaded] of Object.entries(this.plugin.settings.omwDownloaded)) {
+      if (isDownloaded) {
+        downloaded.push(lang as OMWLanguageCode);
+      }
+    }
+    // Sort by language name
+    return downloaded.sort((a, b) => {
+      const infoA = getOMWLanguageInfo(a);
+      const infoB = getOMWLanguageInfo(b);
+      return (infoA?.name || a).localeCompare(infoB?.name || b);
+    });
+  }
+
+  private async downloadLocalData(
+    id: string,
+    button: HTMLButtonElement,
+    select: HTMLSelectElement
+  ): Promise<void> {
+    const originalText = button.textContent;
+    button.disabled = true;
+    select.disabled = true;
+    button.textContent = "Downloading...";
+
+    try {
+      let success = false;
+
+      if (id === "wordnet") {
+        success = await this.plugin.dataService.wordNet.download((progress) => {
+          button.textContent = `${progress.percent}%`;
+        });
+        if (success) {
+          this.plugin.settings.wordNetDownloaded = true;
+        }
+      } else if (id === "moby") {
+        success = await this.plugin.dataService.moby.download((progress) => {
+          button.textContent = `${progress.percent}%`;
+        });
+        if (success) {
+          this.plugin.settings.mobyDownloaded = true;
+        }
+      } else if (id.startsWith("omw:")) {
+        const lang = id.slice(4) as OMWLanguageCode;
+        success = await this.plugin.dataService.omw.download(lang, (progress) => {
+          button.textContent = `${progress.percent}%`;
+        });
+        if (success) {
+          this.plugin.settings.omwDownloaded[lang] = true;
+        }
+      }
+
+      if (success) {
+        await this.plugin.saveSettings();
+        this.display();
+      } else {
+        button.textContent = "Failed";
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.disabled = false;
+          select.disabled = false;
+        }, 2000);
+      }
+    } catch (error) {
+      console.error(`Failed to download ${id}:`, error);
+      button.textContent = "Error";
+      setTimeout(() => {
+        button.textContent = originalText;
+        button.disabled = false;
+        select.disabled = false;
+      }, 2000);
+    }
+  }
+
+  private async deleteLocalData(id: string): Promise<void> {
+    if (id === "wordnet") {
+      await this.plugin.dataService.wordNet.delete();
+      this.plugin.settings.wordNetDownloaded = false;
+    } else if (id === "moby") {
+      await this.plugin.dataService.moby.delete();
+      this.plugin.settings.mobyDownloaded = false;
+    } else if (id.startsWith("omw:")) {
+      const lang = id.slice(4) as OMWLanguageCode;
+      await this.plugin.dataService.omw.delete(lang);
+      delete this.plugin.settings.omwDownloaded[lang];
+    }
+
+    await this.plugin.saveSettings();
+    this.display();
   }
 
   private addNSpellSetting(containerEl: HTMLElement): void {

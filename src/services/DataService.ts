@@ -16,17 +16,19 @@ import {
   ALL_RELATIONSHIP_TYPES,
 } from "../types/types";
 import { LanguageCode, ResolvedLanguage } from "../types/language";
+import { OMWLanguageCode } from "../types/omwLanguage";
 import { WordNetService } from "./WordNetService";
 import { MobyService } from "./MobyService";
 import { DatamuseService } from "./DatamuseService";
 import { NSpellService } from "./NSpellService";
 import { SpellingService } from "./SpellingService";
 import { SynonymService } from "./SynonymService";
+import { OMWService } from "./OMWService";
 import { createAPIService } from "./api";
 import { CacheService } from "./CacheService";
 import { LanguageResolver } from "./LanguageResolver";
 import { getAPIServiceInfo, BUILTIN_SERVICE_TYPES } from "./SynonymService";
-import { serviceSupportsLanguage } from "../data/languages";
+import { serviceSupportsLanguage, serviceSupportsLanguageWithSettings } from "../data/languages";
 
 export class DataService {
   private app: App;
@@ -35,6 +37,7 @@ export class DataService {
   moby: MobyService;
   datamuse: DatamuseService;
   nspell: NSpellService;
+  omw: OMWService;
   private spellingService: SpellingService;
   private apiServices: Map<string, SynonymService> = new Map();
   cacheService: CacheService;
@@ -47,6 +50,7 @@ export class DataService {
     this.moby = new MobyService(app, pluginDir);
     this.datamuse = new DatamuseService(settings.maxResults);
     this.nspell = new NSpellService(app, pluginDir);
+    this.omw = new OMWService(app, pluginDir);
     this.spellingService = new SpellingService(this.nspell, this.datamuse, settings);
     this.cacheService = new CacheService(settings.lookupCache, settings.maxCacheSize);
     this.languageResolver = new LanguageResolver(app, settings);
@@ -91,7 +95,8 @@ export class DataService {
     const enabledSources = this.getEnabledSources();
     for (const source of enabledSources) {
       if (isBuiltinSource(source)) {
-        if (serviceSupportsLanguage(source.id, language)) {
+        // Use dynamic check for local to include OMW languages
+        if (serviceSupportsLanguageWithSettings(source.id, language, this.settings)) {
           return true;
         }
       } else if (isAPISource(source)) {
@@ -111,7 +116,8 @@ export class DataService {
     const enabledSources = this.getEnabledSources();
     for (const source of enabledSources) {
       if (isBuiltinSource(source)) {
-        if (serviceSupportsLanguage(source.id, language)) {
+        // Use dynamic check for local to include OMW languages
+        if (serviceSupportsLanguageWithSettings(source.id, language, this.settings)) {
           count++;
         }
       } else if (isAPISource(source)) {
@@ -146,6 +152,13 @@ export class DataService {
     // Load nspell if downloaded
     if (this.settings.nspellDownloaded) {
       loadPromises.push(this.nspell.load());
+    }
+
+    // Load OMW languages that are marked as downloaded
+    for (const [lang, isDownloaded] of Object.entries(this.settings.omwDownloaded)) {
+      if (isDownloaded) {
+        loadPromises.push(this.omw.load(lang as OMWLanguageCode));
+      }
     }
 
     await Promise.all(loadPromises);
@@ -225,17 +238,26 @@ export class DataService {
     return result;
   }
 
-  private lookupLocal(word: string): SynonymResult[] {
+  private lookupLocal(word: string, language: LanguageCode = "en"): SynonymResult[] {
     const localResults: SynonymResult[] = [];
 
-    if (this.wordNet.isLoaded()) {
-      const wordNetResults = this.wordNet.lookup(word);
-      localResults.push(...wordNetResults);
+    // WordNet and Moby are English-only
+    if (language === "en") {
+      if (this.wordNet.isLoaded()) {
+        const wordNetResults = this.wordNet.lookup(word);
+        localResults.push(...wordNetResults);
+      }
+
+      if (this.moby.isLoaded()) {
+        const mobyResults = this.moby.lookup(word);
+        localResults.push(...mobyResults);
+      }
     }
 
-    if (this.moby.isLoaded()) {
-      const mobyResults = this.moby.lookup(word);
-      localResults.push(...mobyResults);
+    // OMW supports multiple languages
+    if (this.omw.canLookupWordsmithLang(language)) {
+      const omwResults = this.omw.lookupByWordsmithLang(word, language);
+      localResults.push(...omwResults);
     }
 
     const dedupedResults = this.deduplicateResults(localResults, word);
@@ -373,8 +395,8 @@ export class DataService {
       if (!isSourceEnabled(source)) continue;
 
       if (isBuiltinSource(source)) {
-        // Check if this builtin source supports the language
-        if (!serviceSupportsLanguage(source.id, language)) continue;
+        // Check if this builtin source supports the language (dynamic for local)
+        if (!serviceSupportsLanguageWithSettings(source.id, language, this.settings)) continue;
 
         tabs.push({
           id: source.id,
@@ -440,20 +462,19 @@ export class DataService {
     // Process each enabled source that supports the language - check cache first
     for (const source of enabledSources) {
       if (isBuiltinSource(source)) {
-        // Skip sources that don't support the language
-        if (!serviceSupportsLanguage(source.id, language)) continue;
+        // Skip sources that don't support the language (dynamic for local)
+        if (!serviceSupportsLanguageWithSettings(source.id, language, this.settings)) continue;
 
         const supportedTypes = BUILTIN_SERVICE_TYPES[source.id];
         const typesToFetch = initialTypes.filter(t => supportedTypes.includes(t));
 
         if (source.id === "local") {
-          // Local (WordNet/Moby) only supports English
           pendingCount++;
           const cached = this.cacheService.getService(word, "local", language);
           if (cached) {
             onSourceDone("local", cached, true, ["synonym", "related"]);
           } else {
-            const localResults = this.lookupLocal(word);
+            const localResults = this.lookupLocal(word, language);
             onSourceDone("local", localResults, false, ["synonym", "related"]);
           }
         } else if (source.id === "datamuse") {
@@ -537,8 +558,8 @@ export class DataService {
       let sourceId: string;
 
       if (isBuiltinSource(source)) {
-        // Skip sources that don't support the language
-        if (!serviceSupportsLanguage(source.id, language)) continue;
+        // Skip sources that don't support the language (dynamic for local)
+        if (!serviceSupportsLanguageWithSettings(source.id, language, this.settings)) continue;
         supportedTypes = BUILTIN_SERVICE_TYPES[source.id];
         sourceId = source.id;
       } else if (isAPISource(source)) {
