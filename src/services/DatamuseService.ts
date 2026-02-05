@@ -1,5 +1,7 @@
 import { requestUrl } from "obsidian";
 import { SynonymResult, RelationshipType } from "../types/types";
+import { LanguageCode } from "../types/language";
+import { BUILTIN_SERVICE_LANGUAGES } from "../data/languages";
 
 interface DatamuseWord {
   word: string;
@@ -9,6 +11,15 @@ interface DatamuseWord {
 }
 
 const DATAMUSE_BASE_URL = "https://api.datamuse.com/words";
+
+// Datamuse vocabulary parameter for different languages
+// Only Spanish is supported in addition to English
+function getVocabParam(language: LanguageCode): string {
+  if (language === "es") {
+    return "&v=es";
+  }
+  return "";
+}
 
 export class DatamuseService {
   private maxResults: number;
@@ -21,8 +32,9 @@ export class DatamuseService {
     this.maxResults = max;
   }
 
-  async getSynonyms(word: string): Promise<SynonymResult[]> {
-    const url = `${DATAMUSE_BASE_URL}?rel_syn=${encodeURIComponent(word)}&max=${this.maxResults}&md=dp`;
+  async getSynonyms(word: string, language: LanguageCode = "en"): Promise<SynonymResult[]> {
+    const vocabParam = getVocabParam(language);
+    const url = `${DATAMUSE_BASE_URL}?rel_syn=${encodeURIComponent(word)}&max=${this.maxResults}&md=dp${vocabParam}`;
 
     try {
       const response = await requestUrl({ url });
@@ -35,8 +47,9 @@ export class DatamuseService {
     }
   }
 
-  async getRelatedWords(word: string): Promise<SynonymResult[]> {
-    const url = `${DATAMUSE_BASE_URL}?ml=${encodeURIComponent(word)}&max=${this.maxResults}&md=dp`;
+  async getRelatedWords(word: string, language: LanguageCode = "en"): Promise<SynonymResult[]> {
+    const vocabParam = getVocabParam(language);
+    const url = `${DATAMUSE_BASE_URL}?ml=${encodeURIComponent(word)}&max=${this.maxResults}&md=dp${vocabParam}`;
 
     try {
       const response = await requestUrl({ url });
@@ -49,9 +62,10 @@ export class DatamuseService {
     }
   }
 
-  async getSpellingSuggestions(word: string): Promise<SynonymResult[]> {
+  async getSpellingSuggestions(word: string, language: LanguageCode = "en"): Promise<SynonymResult[]> {
     // Use "sounds like" (sl) parameter for spelling suggestions
-    const url = `${DATAMUSE_BASE_URL}?sl=${encodeURIComponent(word)}&max=${this.maxResults}`;
+    const vocabParam = getVocabParam(language);
+    const url = `${DATAMUSE_BASE_URL}?sl=${encodeURIComponent(word)}&max=${this.maxResults}${vocabParam}`;
 
     try {
       const response = await requestUrl({ url });
@@ -68,9 +82,10 @@ export class DatamuseService {
     }
   }
 
-  async getAntonyms(word: string): Promise<SynonymResult[]> {
+  async getAntonyms(word: string, language: LanguageCode = "en"): Promise<SynonymResult[]> {
     // rel_ant = antonyms
-    const url = `${DATAMUSE_BASE_URL}?rel_ant=${encodeURIComponent(word)}&max=${this.maxResults}&md=dp`;
+    const vocabParam = getVocabParam(language);
+    const url = `${DATAMUSE_BASE_URL}?rel_ant=${encodeURIComponent(word)}&max=${this.maxResults}&md=dp${vocabParam}`;
 
     try {
       const response = await requestUrl({ url });
@@ -83,9 +98,10 @@ export class DatamuseService {
     }
   }
 
-  async getHypernyms(word: string): Promise<SynonymResult[]> {
+  async getHypernyms(word: string, language: LanguageCode = "en"): Promise<SynonymResult[]> {
     // rel_spc = "more specific than" = hypernyms (words that the query is a type of)
-    const url = `${DATAMUSE_BASE_URL}?rel_spc=${encodeURIComponent(word)}&max=${this.maxResults}&md=dp`;
+    const vocabParam = getVocabParam(language);
+    const url = `${DATAMUSE_BASE_URL}?rel_spc=${encodeURIComponent(word)}&max=${this.maxResults}&md=dp${vocabParam}`;
 
     try {
       const response = await requestUrl({ url });
@@ -98,9 +114,10 @@ export class DatamuseService {
     }
   }
 
-  async getHyponyms(word: string): Promise<SynonymResult[]> {
+  async getHyponyms(word: string, language: LanguageCode = "en"): Promise<SynonymResult[]> {
     // rel_gen = "more general than" = hyponyms (more specific terms under the query)
-    const url = `${DATAMUSE_BASE_URL}?rel_gen=${encodeURIComponent(word)}&max=${this.maxResults}&md=dp`;
+    const vocabParam = getVocabParam(language);
+    const url = `${DATAMUSE_BASE_URL}?rel_gen=${encodeURIComponent(word)}&max=${this.maxResults}&md=dp${vocabParam}`;
 
     try {
       const response = await requestUrl({ url });
@@ -113,7 +130,7 @@ export class DatamuseService {
     }
   }
 
-  async lookup(word: string, types?: RelationshipType[]): Promise<{ synonyms: SynonymResult[]; relatedWords: SynonymResult[] }> {
+  async lookup(word: string, types?: RelationshipType[], language: LanguageCode = "en"): Promise<{ synonyms: SynonymResult[]; relatedWords: SynonymResult[] }> {
     // Default to synonym + related for backward compatibility
     const requestedTypes = types || ["synonym", "related"];
 
@@ -121,27 +138,27 @@ export class DatamuseService {
     const typeMapping: { type: RelationshipType; promise: Promise<SynonymResult[]> }[] = [];
 
     if (requestedTypes.includes("synonym")) {
-      const p = this.getSynonyms(word);
+      const p = this.getSynonyms(word, language);
       promises.push(p);
       typeMapping.push({ type: "synonym", promise: p });
     }
     if (requestedTypes.includes("related")) {
-      const p = this.getRelatedWords(word);
+      const p = this.getRelatedWords(word, language);
       promises.push(p);
       typeMapping.push({ type: "related", promise: p });
     }
     if (requestedTypes.includes("antonym")) {
-      const p = this.getAntonyms(word);
+      const p = this.getAntonyms(word, language);
       promises.push(p);
       typeMapping.push({ type: "antonym", promise: p });
     }
     if (requestedTypes.includes("hypernym")) {
-      const p = this.getHypernyms(word);
+      const p = this.getHypernyms(word, language);
       promises.push(p);
       typeMapping.push({ type: "hypernym", promise: p });
     }
     if (requestedTypes.includes("hyponym")) {
-      const p = this.getHyponyms(word);
+      const p = this.getHyponyms(word, language);
       promises.push(p);
       typeMapping.push({ type: "hyponym", promise: p });
     }
@@ -171,13 +188,17 @@ export class DatamuseService {
    * Lookup specific relationship types and return flat array of results.
    * Used for lazy loading additional types.
    */
-  async lookupTypes(word: string, types: RelationshipType[]): Promise<SynonymResult[]> {
-    const { synonyms, relatedWords } = await this.lookup(word, types);
+  async lookupTypes(word: string, types: RelationshipType[], language: LanguageCode = "en"): Promise<SynonymResult[]> {
+    const { synonyms, relatedWords } = await this.lookup(word, types, language);
     return [...synonyms, ...relatedWords];
   }
 
   supportedTypes(): RelationshipType[] {
     return ["synonym", "antonym", "related", "hypernym", "hyponym"];
+  }
+
+  supportedLanguages(): LanguageCode[] {
+    return BUILTIN_SERVICE_LANGUAGES["datamuse"];
   }
 
   private parseDatamuseWord(

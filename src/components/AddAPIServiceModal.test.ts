@@ -20,6 +20,7 @@ jest.mock("../services/SynonymService", () => ({
       registrationUrl: "",
       registrationInstructions: "No API key required",
       supportedTypes: ["synonym", "antonym"],
+      supportedLanguages: ["en", "es", "fr", "de"],
     },
     "merriam-webster": {
       type: "merriam-webster",
@@ -29,6 +30,7 @@ jest.mock("../services/SynonymService", () => ({
       registrationUrl: "https://dictionaryapi.com/register",
       registrationInstructions: "Create a free account",
       supportedTypes: ["synonym", "antonym"],
+      supportedLanguages: ["en"],
     },
     "big-huge-thesaurus": {
       type: "big-huge-thesaurus",
@@ -38,6 +40,7 @@ jest.mock("../services/SynonymService", () => ({
       registrationUrl: "https://words.bighugelabs.com",
       registrationInstructions: "Create an account",
       supportedTypes: ["synonym", "antonym", "related"],
+      supportedLanguages: ["en"],
     },
     "words-api": {
       type: "words-api",
@@ -47,6 +50,7 @@ jest.mock("../services/SynonymService", () => ({
       registrationUrl: "https://rapidapi.com",
       registrationInstructions: "Sign up for RapidAPI",
       supportedTypes: ["synonym", "antonym", "related", "hypernym", "hyponym"],
+      supportedLanguages: ["en"],
     },
     "api-ninjas": {
       type: "api-ninjas",
@@ -56,6 +60,7 @@ jest.mock("../services/SynonymService", () => ({
       registrationUrl: "https://api-ninjas.com",
       registrationInstructions: "Create a free account",
       supportedTypes: ["synonym", "antonym"],
+      supportedLanguages: ["en"],
     },
     altervista: {
       type: "altervista",
@@ -65,6 +70,7 @@ jest.mock("../services/SynonymService", () => ({
       registrationUrl: "https://thesaurus.altervista.org",
       registrationInstructions: "Register for an API key",
       supportedTypes: ["synonym", "antonym"],
+      supportedLanguages: ["cs", "da", "de", "el", "en", "es", "fr", "hu", "it", "no", "pl", "pt-BR", "ro", "ru", "sk"],
     },
   },
   getAllAPIServiceTypes: jest.fn().mockReturnValue([
@@ -84,6 +90,7 @@ jest.mock("../services/SynonymService", () => ({
         registrationUrl: "",
         registrationInstructions: "No API key required",
         supportedTypes: ["synonym", "antonym"],
+        supportedLanguages: ["en", "es", "fr", "de"],
       },
       "merriam-webster": {
         name: "Merriam-Webster",
@@ -92,6 +99,43 @@ jest.mock("../services/SynonymService", () => ({
         registrationUrl: "https://dictionaryapi.com/register",
         registrationInstructions: "Create a free account",
         supportedTypes: ["synonym", "antonym"],
+        supportedLanguages: ["en"],
+      },
+      "big-huge-thesaurus": {
+        name: "Big Huge Thesaurus",
+        description: "Simple thesaurus API",
+        requiresKey: true,
+        registrationUrl: "https://words.bighugelabs.com",
+        registrationInstructions: "Create an account",
+        supportedTypes: ["synonym", "antonym", "related"],
+        supportedLanguages: ["en"],
+      },
+      "words-api": {
+        name: "WordsAPI",
+        description: "Comprehensive word data",
+        requiresKey: true,
+        registrationUrl: "https://rapidapi.com",
+        registrationInstructions: "Sign up for RapidAPI",
+        supportedTypes: ["synonym", "antonym", "related", "hypernym", "hyponym"],
+        supportedLanguages: ["en"],
+      },
+      "api-ninjas": {
+        name: "API Ninjas",
+        description: "Thesaurus API",
+        requiresKey: true,
+        registrationUrl: "https://api-ninjas.com",
+        registrationInstructions: "Create a free account",
+        supportedTypes: ["synonym", "antonym"],
+        supportedLanguages: ["en"],
+      },
+      altervista: {
+        name: "Altervista",
+        description: "Multilingual thesaurus",
+        requiresKey: true,
+        registrationUrl: "https://thesaurus.altervista.org",
+        registrationInstructions: "Register for an API key",
+        supportedTypes: ["synonym", "antonym"],
+        supportedLanguages: ["cs", "da", "de", "el", "en", "es", "fr", "hu", "it", "no", "pl", "pt-BR", "ro", "ru", "sk"],
       },
     };
     return info[type as keyof typeof info] || info["free-dictionary"];
@@ -127,7 +171,7 @@ describe("AddAPIServiceModal", () => {
     // Reset getAPIServiceInfo to default implementation
     const { getAPIServiceInfo } = require("../services/SynonymService");
     getAPIServiceInfo.mockImplementation((type: string) => {
-      const info: Record<string, { name: string; description: string; requiresKey: boolean; registrationUrl: string; registrationInstructions: string; supportedTypes: string[] }> = {
+      const info: Record<string, { name: string; description: string; requiresKey: boolean; registrationUrl: string; registrationInstructions: string; supportedTypes: string[]; supportedLanguages: string[] }> = {
         "free-dictionary": {
           name: "Free Dictionary",
           description: "Free dictionary API",
@@ -135,6 +179,7 @@ describe("AddAPIServiceModal", () => {
           registrationUrl: "",
           registrationInstructions: "No API key required",
           supportedTypes: ["synonym", "antonym"],
+          supportedLanguages: ["en", "es", "fr", "de"],
         },
         "merriam-webster": {
           name: "Merriam-Webster",
@@ -143,6 +188,7 @@ describe("AddAPIServiceModal", () => {
           registrationUrl: "https://dictionaryapi.com/register",
           registrationInstructions: "Create a free account",
           supportedTypes: ["synonym", "antonym"],
+          supportedLanguages: ["en"],
         },
       };
       return info[type] || info["free-dictionary"];
@@ -937,6 +983,7 @@ describe("AddAPIServiceModal", () => {
           registrationUrl: serviceType !== "free-dictionary" ? "https://example.com" : "",
           registrationInstructions: "Instructions",
           supportedTypes: ["synonym"],
+          supportedLanguages: ["en"],
         });
 
         modal.open();

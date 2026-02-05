@@ -369,6 +369,13 @@ export class MockDropdownComponent implements DropdownComponent {
     return this;
   }
 
+  addOptions(options: Record<string, string>): this {
+    for (const [value, display] of Object.entries(options)) {
+      this.addOption(value, display);
+    }
+    return this;
+  }
+
   setValue(value: string): this {
     this._value = value;
     this.selectEl.value = value;

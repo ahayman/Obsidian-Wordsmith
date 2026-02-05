@@ -693,6 +693,30 @@
   height: 12px;
 }
 
+/* Service Capabilities */
+.wordsmith-service-capabilities {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.wordsmith-capability-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 0.85em;
+  line-height: 1.6;
+}
+
+.wordsmith-capability-label {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.wordsmith-capability-value {
+  color: var(--text-normal);
+}
+
 /* API Key Setting */
 .wordsmith-api-key-setting {
   margin-bottom: 16px;

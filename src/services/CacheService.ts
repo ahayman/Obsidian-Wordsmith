@@ -4,6 +4,7 @@ import {
   SynonymResult,
   RelationshipType,
 } from "../types/types";
+import { LanguageCode } from "../types/language";
 
 const CACHE_VERSION = 3; // Bumped for new cache structure
 
@@ -16,21 +17,34 @@ export class CacheService {
     this.entries = new Map(Object.entries(cache.entries));
   }
 
-  private normalizeKey(word: string): string {
-    return word.toLowerCase().trim();
+  private normalizeKey(word: string, language: LanguageCode = "en"): string {
+    return `${word.toLowerCase().trim()}:${language}`;
   }
 
   /**
    * Get cached results for a specific service.
    */
-  getService(word: string, serviceId: string): SynonymResult[] | null {
+  getService(word: string, serviceId: string, language: LanguageCode = "en"): SynonymResult[] | null {
     if (this._maxSize === 0) return null;
 
-    const key = this.normalizeKey(word);
+    const key = this.normalizeKey(word, language);
     const entry = this.entries.get(key);
 
     // Guard against old cache format or missing services
     if (!entry || !entry.services || !(serviceId in entry.services)) {
+      // Try legacy key format (without language) for backwards compatibility
+      if (language === "en") {
+        const legacyKey = word.toLowerCase().trim();
+        const legacyEntry = this.entries.get(legacyKey);
+        if (legacyEntry?.services && serviceId in legacyEntry.services) {
+          legacyEntry.lastAccessed = Date.now();
+          const serviceData = legacyEntry.services[serviceId];
+          if (Array.isArray(serviceData)) {
+            return serviceData;
+          }
+          return serviceData?.results ?? null;
+        }
+      }
       return null;
     }
 
@@ -48,13 +62,13 @@ export class CacheService {
    * Get cached results for a specific service, filtered by types.
    * Returns null if any of the requested types haven't been fetched yet.
    */
-  getServiceForTypes(word: string, serviceId: string, types: RelationshipType[]): SynonymResult[] | null {
-    const results = this.getService(word, serviceId);
+  getServiceForTypes(word: string, serviceId: string, types: RelationshipType[], language: LanguageCode = "en"): SynonymResult[] | null {
+    const results = this.getService(word, serviceId, language);
     if (!results) return null;
 
     // Verify all requested types have been fetched - if not, return null
     // so the caller knows to fetch the missing types
-    const fetchedTypes = this.getFetchedTypes(word, serviceId);
+    const fetchedTypes = this.getFetchedTypes(word, serviceId, language);
     if (!types.every(t => fetchedTypes.includes(t))) {
       return null;
     }
@@ -65,11 +79,23 @@ export class CacheService {
   /**
    * Get which relationship types have been fetched for a service.
    */
-  getFetchedTypes(word: string, serviceId: string): RelationshipType[] {
-    const key = this.normalizeKey(word);
+  getFetchedTypes(word: string, serviceId: string, language: LanguageCode = "en"): RelationshipType[] {
+    const key = this.normalizeKey(word, language);
     const entry = this.entries.get(key);
 
     if (!entry || !entry.services || !(serviceId in entry.services)) {
+      // Try legacy key format for backwards compatibility
+      if (language === "en") {
+        const legacyKey = word.toLowerCase().trim();
+        const legacyEntry = this.entries.get(legacyKey);
+        if (legacyEntry?.services && serviceId in legacyEntry.services) {
+          const serviceData = legacyEntry.services[serviceId];
+          if (Array.isArray(serviceData)) {
+            return ["synonym", "related"];
+          }
+          return serviceData?.fetchedTypes ?? [];
+        }
+      }
       return [];
     }
 
@@ -84,18 +110,18 @@ export class CacheService {
   /**
    * Get which relationship types are NOT cached for a service.
    */
-  getMissingTypes(word: string, serviceId: string, requestedTypes: RelationshipType[]): RelationshipType[] {
-    const fetchedTypes = this.getFetchedTypes(word, serviceId);
+  getMissingTypes(word: string, serviceId: string, requestedTypes: RelationshipType[], language: LanguageCode = "en"): RelationshipType[] {
+    const fetchedTypes = this.getFetchedTypes(word, serviceId, language);
     return requestedTypes.filter(t => !fetchedTypes.includes(t));
   }
 
   /**
    * Cache results for a specific service with type tracking.
    */
-  setService(word: string, serviceId: string, results: SynonymResult[], fetchedTypes?: RelationshipType[]): void {
+  setService(word: string, serviceId: string, results: SynonymResult[], fetchedTypes?: RelationshipType[], language: LanguageCode = "en"): void {
     if (this._maxSize === 0) return;
 
-    const key = this.normalizeKey(word);
+    const key = this.normalizeKey(word, language);
     const existing = this.entries.get(key);
 
     // Infer fetched types from results if not provided
@@ -181,28 +207,45 @@ export class CacheService {
   /**
    * Check if a specific service is cached for a word.
    */
-  hasService(word: string, serviceId: string): boolean {
-    const key = this.normalizeKey(word);
+  hasService(word: string, serviceId: string, language: LanguageCode = "en"): boolean {
+    const key = this.normalizeKey(word, language);
     const entry = this.entries.get(key);
-    return entry !== undefined && entry.services !== undefined && serviceId in entry.services;
+    if (entry !== undefined && entry.services !== undefined && serviceId in entry.services) {
+      return true;
+    }
+    // Check legacy key format for backwards compatibility
+    if (language === "en") {
+      const legacyKey = word.toLowerCase().trim();
+      const legacyEntry = this.entries.get(legacyKey);
+      return legacyEntry !== undefined && legacyEntry.services !== undefined && serviceId in legacyEntry.services;
+    }
+    return false;
   }
 
   /**
    * Check if specific types are cached for a service.
    */
-  hasServiceTypes(word: string, serviceId: string, types: RelationshipType[]): boolean {
-    const fetchedTypes = this.getFetchedTypes(word, serviceId);
+  hasServiceTypes(word: string, serviceId: string, types: RelationshipType[], language: LanguageCode = "en"): boolean {
+    const fetchedTypes = this.getFetchedTypes(word, serviceId, language);
     return types.every(t => fetchedTypes.includes(t));
   }
 
   /**
    * Get list of service IDs that are NOT cached for a word.
    */
-  getMissingServices(word: string, serviceIds: string[]): string[] {
-    const key = this.normalizeKey(word);
+  getMissingServices(word: string, serviceIds: string[], language: LanguageCode = "en"): string[] {
+    const key = this.normalizeKey(word, language);
     const entry = this.entries.get(key);
 
     if (!entry || !entry.services) {
+      // Check legacy key format for backwards compatibility
+      if (language === "en") {
+        const legacyKey = word.toLowerCase().trim();
+        const legacyEntry = this.entries.get(legacyKey);
+        if (legacyEntry?.services) {
+          return serviceIds.filter((id) => !(id in legacyEntry.services));
+        }
+      }
       return serviceIds;
     }
 
@@ -213,11 +256,17 @@ export class CacheService {
    * Get all cached service results for a word.
    * Returns null if no cache entry exists.
    */
-  getAllServices(word: string): Record<string, SynonymResult[]> | null {
+  getAllServices(word: string, language: LanguageCode = "en"): Record<string, SynonymResult[]> | null {
     if (this._maxSize === 0) return null;
 
-    const key = this.normalizeKey(word);
-    const entry = this.entries.get(key);
+    const key = this.normalizeKey(word, language);
+    let entry = this.entries.get(key);
+
+    // Try legacy key format for backwards compatibility
+    if (!entry && language === "en") {
+      const legacyKey = word.toLowerCase().trim();
+      entry = this.entries.get(legacyKey);
+    }
 
     if (!entry || !entry.services) return null;
 
@@ -239,11 +288,11 @@ export class CacheService {
   /**
    * Cache multiple service results at once.
    */
-  setMultipleServices(word: string, results: Record<string, SynonymResult[]>, fetchedTypes?: RelationshipType[]): void {
+  setMultipleServices(word: string, results: Record<string, SynonymResult[]>, fetchedTypes?: RelationshipType[], language: LanguageCode = "en"): void {
     if (this._maxSize === 0) return;
 
     for (const [serviceId, serviceResults] of Object.entries(results)) {
-      this.setService(word, serviceId, serviceResults, fetchedTypes);
+      this.setService(word, serviceId, serviceResults, fetchedTypes, language);
     }
   }
 

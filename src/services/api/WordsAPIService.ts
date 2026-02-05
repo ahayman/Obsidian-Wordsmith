@@ -1,5 +1,6 @@
 import { requestUrl } from "obsidian";
 import { SynonymResult, RelationshipType } from "../../types/types";
+import { LanguageCode } from "../../types/language";
 import { SynonymService, API_SERVICE_INFO } from "../SynonymService";
 
 interface WordsAPIResponse {
@@ -59,7 +60,7 @@ export class WordsAPIService implements SynonymService {
     }
   }
 
-  async lookup(word: string, maxResults: number, types?: RelationshipType[]): Promise<SynonymResult[]> {
+  async lookup(word: string, maxResults: number, types?: RelationshipType[], _language?: LanguageCode): Promise<SynonymResult[]> {
     // Default to synonyms + antonyms (the common upfront fetch)
     const requestedTypes = types || ["synonym", "antonym"];
     const results: SynonymResult[] = [];
@@ -132,5 +133,9 @@ export class WordsAPIService implements SynonymService {
 
   supportedTypes(): RelationshipType[] {
     return API_SERVICE_INFO["words-api"].supportedTypes;
+  }
+
+  supportedLanguages(): LanguageCode[] {
+    return API_SERVICE_INFO["words-api"].supportedLanguages;
   }
 }

@@ -8,6 +8,8 @@ import {
   GroupedResults,
   DefinitionGroup,
 } from "../types/types";
+import { LanguageCode } from "../types/language";
+import { getLanguageName } from "../data/languages";
 import WordsmithPlugin from "../main";
 import { replaceWord } from "../utils/wordExtractor";
 import { createServiceIcon } from "../utils/serviceIcons";
@@ -28,6 +30,10 @@ export class SynonymModal extends Modal {
   private wordRange: WordRange;
   private tabMetadata: TabMetadata[];
 
+  // Language info
+  private language: LanguageCode;
+  private languageSource: string;
+
   // Tab state management
   private tabStates: Map<string, TabState> = new Map();
   private tabResults: Map<string, SynonymResult[]> = new Map();
@@ -43,6 +49,7 @@ export class SynonymModal extends Modal {
   private tabContainerEl: HTMLElement;
   private filterContainerEl: HTMLElement;
   private resultsContainerEl: HTMLElement;
+  private languageIndicatorEl: HTMLElement;
 
   private activeTabId: string;
   private selectedIndex: number = 0;
@@ -66,7 +73,9 @@ export class SynonymModal extends Modal {
     word: string,
     wordRange: WordRange,
     tabMetadata: TabMetadata[],
-    initialType: RelationshipType = "synonym"
+    initialType: RelationshipType = "synonym",
+    language: LanguageCode = "en",
+    languageSource: string = "settings"
   ) {
     super(plugin.app);
     this.plugin = plugin;
@@ -74,6 +83,8 @@ export class SynonymModal extends Modal {
     this.wordRange = wordRange;
     this.tabMetadata = tabMetadata;
     this.initialType = initialType;
+    this.language = language;
+    this.languageSource = languageSource;
 
     // Initialize all tabs as loading with empty results
     for (const tab of tabMetadata) {
@@ -193,6 +204,10 @@ export class SynonymModal extends Modal {
     this.resultsContainerEl.addEventListener("touchstart", (e) => this.handleTouchStart(e), { passive: true });
     this.resultsContainerEl.addEventListener("touchmove", (e) => this.handleTouchMove(e), { passive: false });
     this.resultsContainerEl.addEventListener("touchend", (e) => this.handleTouchEnd(e), { passive: true });
+
+    // Add language indicator (subtle, in bottom corner)
+    this.languageIndicatorEl = contentEl.createDiv({ cls: "wordsmith-language-indicator" });
+    this.renderLanguageIndicator();
 
     // Add instructions
     const instructionsEl = contentEl.createDiv({ cls: "wordsmith-instructions" });
@@ -408,12 +423,57 @@ export class SynonymModal extends Modal {
           }
           // Update tab counts
           this.renderTabs();
-        }
+        },
+        this.language
       );
     } finally {
       this.loadingTypes.delete(type);
       this.renderFilters();
     }
+  }
+
+  /**
+   * Render the language indicator in the bottom corner.
+   */
+  private renderLanguageIndicator(): void {
+    this.languageIndicatorEl.empty();
+
+    // Only show for non-English languages
+    if (this.language === "en") {
+      this.languageIndicatorEl.addClass("wordsmith-hidden");
+      return;
+    }
+
+    this.languageIndicatorEl.removeClass("wordsmith-hidden");
+
+    const langName = getLanguageName(this.language);
+    let displayText = langName;
+
+    // Add source indicator for detected/auto languages
+    if (this.languageSource === "detection") {
+      displayText += " (detected)";
+    } else if (this.languageSource === "frontmatter") {
+      displayText += " (document)";
+    }
+
+    this.languageIndicatorEl.setText(displayText);
+  }
+
+  /**
+   * Render an error message when no services support the language.
+   */
+  renderNoServicesForLanguage(): void {
+    this.resultsContainerEl.empty();
+    const langName = getLanguageName(this.language);
+    const errorEl = this.resultsContainerEl.createDiv({ cls: "wordsmith-no-results" });
+    errorEl.createDiv({
+      cls: "wordsmith-no-results-title",
+      text: `No services support ${langName}`,
+    });
+    errorEl.createDiv({
+      cls: "wordsmith-no-results-desc",
+      text: "Try enabling additional services in settings, or change the language setting.",
+    });
   }
 
   private updateFilteredResults(): void {

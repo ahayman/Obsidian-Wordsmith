@@ -1,5 +1,6 @@
 import { requestUrl } from "obsidian";
 import { SynonymResult, RelationshipType } from "../../types/types";
+import { LanguageCode } from "../../types/language";
 import { SynonymService, API_SERVICE_INFO } from "../SynonymService";
 
 interface FreeDictionaryMeaning {
@@ -18,7 +19,23 @@ interface FreeDictionaryEntry {
   meanings: FreeDictionaryMeaning[];
 }
 
-const BASE_URL = "https://api.dictionaryapi.dev/api/v2/entries/en";
+const BASE_URL = "https://api.dictionaryapi.dev/api/v2/entries";
+
+// Map our language codes to FreeDictionary API paths
+const LANGUAGE_PATH_MAP: Record<string, string> = {
+  en: "en",
+  es: "es",
+  fr: "fr",
+  de: "de",
+  it: "it",
+  "pt-BR": "pt-BR",
+  ja: "ja",
+  ko: "ko",
+  ar: "ar",
+  ru: "ru",
+  hi: "hi",
+  tr: "tr",
+};
 
 export class FreeDictionaryService implements SynonymService {
   readonly id: string;
@@ -29,9 +46,10 @@ export class FreeDictionaryService implements SynonymService {
     this.id = id;
   }
 
-  async lookup(word: string, maxResults: number, types?: RelationshipType[]): Promise<SynonymResult[]> {
+  async lookup(word: string, maxResults: number, types?: RelationshipType[], language: LanguageCode = "en"): Promise<SynonymResult[]> {
     const requestedTypes = types || ["synonym", "antonym"];
-    const url = `${BASE_URL}/${encodeURIComponent(word)}`;
+    const langPath = LANGUAGE_PATH_MAP[language] || "en";
+    const url = `${BASE_URL}/${langPath}/${encodeURIComponent(word)}`;
 
     const response = await requestUrl({ url });
     const data = response.json as FreeDictionaryEntry[];
@@ -122,6 +140,10 @@ export class FreeDictionaryService implements SynonymService {
 
   supportedTypes(): RelationshipType[] {
     return API_SERVICE_INFO["free-dictionary"].supportedTypes;
+  }
+
+  supportedLanguages(): LanguageCode[] {
+    return API_SERVICE_INFO["free-dictionary"].supportedLanguages;
   }
 
   async validate(): Promise<{ valid: boolean; error?: string }> {

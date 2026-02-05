@@ -15,7 +15,12 @@ const config = {
   },
   moduleNameMapper: {
     "^obsidian$": "<rootDir>/__mocks__/obsidian.ts",
+    "^franc-min$": "<rootDir>/__mocks__/franc-min.ts",
   },
+  // Transform ESM modules in node_modules
+  transformIgnorePatterns: [
+    "node_modules/(?!(franc-min|trigram-utils|n-gram|collapse-white-space)/)",
+  ],
   collectCoverageFrom: ["src/**/*.ts", "!src/**/*.test.ts"],
   coverageDirectory: "coverage",
 };

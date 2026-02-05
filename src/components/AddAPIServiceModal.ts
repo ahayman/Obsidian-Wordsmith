@@ -1,12 +1,14 @@
 import { Modal, Setting, setIcon } from "obsidian";
 import WordsmithPlugin from "../main";
-import { APIServiceConfig, APIServiceType } from "../types/types";
+import { APIServiceConfig, APIServiceType, RelationshipType } from "../types/types";
 import {
   API_SERVICE_INFO,
   getAllAPIServiceTypes,
   getAPIServiceInfo,
 } from "../services/SynonymService";
 import { createAPIServiceForValidation } from "../services/api";
+import { getLanguageName } from "../data/languages";
+import { LanguageCode } from "../types/language";
 
 export class AddAPIServiceModal extends Modal {
   private plugin: WordsmithPlugin;
@@ -130,6 +132,51 @@ export class AddAPIServiceModal extends Modal {
       const iconSpan = linkEl.createSpan();
       setIcon(iconSpan, "external-link");
     }
+
+    // Service capabilities section
+    const capabilitiesEl = this.instructionsContainerEl.createDiv({
+      cls: "wordsmith-service-capabilities",
+    });
+
+    // Relationship types
+    const typesEl = capabilitiesEl.createDiv({ cls: "wordsmith-capability-row" });
+    typesEl.createSpan({ cls: "wordsmith-capability-label", text: "Types: " });
+    typesEl.createSpan({
+      cls: "wordsmith-capability-value",
+      text: this.formatRelationshipTypes(info.supportedTypes),
+    });
+
+    // Languages
+    const languagesEl = capabilitiesEl.createDiv({ cls: "wordsmith-capability-row" });
+    languagesEl.createSpan({ cls: "wordsmith-capability-label", text: "Languages: " });
+    languagesEl.createSpan({
+      cls: "wordsmith-capability-value",
+      text: this.formatLanguages(info.supportedLanguages),
+    });
+  }
+
+  private formatRelationshipTypes(types: RelationshipType[] | undefined): string {
+    if (!types || types.length === 0) {
+      return "Unknown";
+    }
+    const typeNames: Record<RelationshipType, string> = {
+      synonym: "Synonyms",
+      antonym: "Antonyms",
+      related: "Related",
+      hypernym: "Hypernyms",
+      hyponym: "Hyponyms",
+    };
+    return types.map(t => typeNames[t] || t).join(", ");
+  }
+
+  private formatLanguages(languages: LanguageCode[] | undefined): string {
+    if (!languages || languages.length === 0) {
+      return "Unknown";
+    }
+    if (languages.length === 1 && languages[0] === "en") {
+      return "English only";
+    }
+    return languages.map(getLanguageName).join(", ");
   }
 
   private updateAPIKeyVisibility(): void {

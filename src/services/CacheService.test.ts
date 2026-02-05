@@ -277,9 +277,10 @@ describe("CacheService", () => {
       const serialized = cache.toCache();
 
       expect(serialized.version).toBe(3);
-      expect(serialized.entries["hello"]).toBeDefined();
-      expect(serialized.entries["hello"]!.word).toBe("hello");
-      const serviceData = serialized.entries["hello"]!.services["local"] as ServiceCacheData;
+      // Cache keys now include language: "hello:en"
+      expect(serialized.entries["hello:en"]).toBeDefined();
+      expect(serialized.entries["hello:en"]!.word).toBe("hello:en");
+      const serviceData = serialized.entries["hello:en"]!.services["local"] as ServiceCacheData;
       expect(serviceData.results).toEqual(results);
       expect(serviceData.fetchedTypes).toEqual(["synonym"]);
     });

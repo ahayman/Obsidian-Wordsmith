@@ -24,6 +24,8 @@ jest.mock("./services/DataService", () => ({
       { id: "local", label: "Local", iconId: "local" },
     ]),
     lookupStreaming: jest.fn().mockReturnValue({ cancel: jest.fn() }),
+    resolveLanguage: jest.fn().mockReturnValue({ code: "en", source: "settings" }),
+    hasServicesForLanguage: jest.fn().mockReturnValue(true),
     cacheService: {
       toCache: jest.fn().mockReturnValue({ entries: {}, version: 1 }),
     },
@@ -91,6 +93,7 @@ function createMockEditor(): Editor {
     replaceSelection: jest.fn(),
     getCursor: jest.fn().mockReturnValue({ line: 0, ch: 5 }),
     getLine: jest.fn().mockReturnValue("hello world"),
+    lineCount: jest.fn().mockReturnValue(5),
   } as unknown as Editor;
 }
 
@@ -212,6 +215,9 @@ describe("WordsmithPlugin", () => {
           offlineSpellingOnly: true,
           maxCacheSize: 200,
           lookupCache: { entries: {}, version: 1 },
+          language: "default",
+          fallbackLanguage: "en",
+          frontmatterProperty: "lang",
         };
 
         loadDataMock.mockResolvedValue(newSettings);
@@ -590,7 +596,9 @@ describe("WordsmithPlugin", () => {
         "hello",
         wordRange,
         tabMetadata,
-        "synonym"
+        "synonym",
+        "en",
+        "settings"
       );
     });
 
@@ -611,7 +619,8 @@ describe("WordsmithPlugin", () => {
       expect(plugin.dataService.lookupStreaming).toHaveBeenCalledWith(
         "hello",
         expect.any(Object),
-        ["synonym", "antonym"]
+        ["synonym", "antonym"],
+        "en"
       );
     });
 
@@ -637,7 +646,8 @@ describe("WordsmithPlugin", () => {
       expect(plugin.dataService.lookupStreaming).toHaveBeenCalledWith(
         "animal",
         expect.any(Object),
-        ["synonym", "antonym", "hypernym"]
+        ["synonym", "antonym", "hypernym"],
+        "en"
       );
     });
 
@@ -693,6 +703,9 @@ describe("WordsmithPlugin", () => {
         offlineSpellingOnly: false,
         maxCacheSize: 100,
         lookupCache: { entries: {}, version: 1 },
+        language: "default" as const,
+        fallbackLanguage: "en" as const,
+        frontmatterProperty: "lang",
       };
 
       loadDataMock.mockResolvedValue(newSettings);
@@ -794,6 +807,9 @@ describe("WordsmithPlugin", () => {
         offlineSpellingOnly: false,
         maxCacheSize: 100,
         lookupCache: { entries: {}, version: 1 },
+        language: "default" as const,
+        fallbackLanguage: "en" as const,
+        frontmatterProperty: "lang",
       };
 
       loadDataMock.mockResolvedValue(settings);
@@ -855,6 +871,9 @@ describe("WordsmithPlugin", () => {
         offlineSpellingOnly: false,
         maxCacheSize: 100,
         lookupCache: { entries: {}, version: 1 },
+        language: "default" as const,
+        fallbackLanguage: "en" as const,
+        frontmatterProperty: "lang",
       };
 
       loadDataMock.mockResolvedValue(settings);

@@ -1,5 +1,6 @@
 import { requestUrl } from "obsidian";
 import { SynonymResult, RelationshipType } from "../../types/types";
+import { LanguageCode } from "../../types/language";
 import { SynonymService, API_SERVICE_INFO } from "../SynonymService";
 
 interface APINinjasThesaurusResponse {
@@ -21,7 +22,7 @@ export class APINinjasService implements SynonymService {
     this.apiKey = apiKey;
   }
 
-  async lookup(word: string, maxResults: number, types?: RelationshipType[]): Promise<SynonymResult[]> {
+  async lookup(word: string, maxResults: number, types?: RelationshipType[], _language?: LanguageCode): Promise<SynonymResult[]> {
     const requestedTypes = types || ["synonym", "antonym"];
     const url = `${BASE_URL}?word=${encodeURIComponent(word)}`;
 
@@ -60,6 +61,10 @@ export class APINinjasService implements SynonymService {
 
   supportedTypes(): RelationshipType[] {
     return API_SERVICE_INFO["api-ninjas"].supportedTypes;
+  }
+
+  supportedLanguages(): LanguageCode[] {
+    return API_SERVICE_INFO["api-ninjas"].supportedLanguages;
   }
 
   async validate(): Promise<{ valid: boolean; error?: string }> {

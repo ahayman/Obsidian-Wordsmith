@@ -265,7 +265,7 @@ describe("DataService", () => {
 
       await service.lookup("test");
 
-      expect(mockDatamuse.lookup).toHaveBeenCalledWith("test", undefined);
+      expect(mockDatamuse.lookup).toHaveBeenCalledWith("test", undefined, "en");
     });
 
     it("should not lookup from disabled sources", async () => {
@@ -578,7 +578,8 @@ describe("DataService", () => {
         "test",
         "local",
         expect.any(Array),
-        expect.any(Array)
+        expect.any(Array),
+        "en"
       );
     });
   });
@@ -663,7 +664,7 @@ describe("DataService", () => {
 
       await service.getQuickReplaceSuggestions("test", "antonym");
 
-      expect(mockDatamuse.lookup).toHaveBeenCalledWith("test", ["antonym"]);
+      expect(mockDatamuse.lookup).toHaveBeenCalledWith("test", ["antonym"], "en");
     });
 
     it("should return empty array when no enabled sources", async () => {
@@ -854,7 +855,7 @@ describe("DataService", () => {
 
       const results = await service.fetchAdditionalTypes("test", ["hypernym"]);
 
-      expect(mockDatamuse.lookup).toHaveBeenCalledWith("test", ["hypernym"]);
+      expect(mockDatamuse.lookup).toHaveBeenCalledWith("test", ["hypernym"], "en");
       expect(results.length).toBeGreaterThan(0);
     });
 

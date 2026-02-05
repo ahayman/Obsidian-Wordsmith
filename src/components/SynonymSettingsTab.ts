@@ -9,8 +9,11 @@ import {
   APIServiceConfig,
   RelationshipType,
 } from "../types/types";
+import { LanguageCode, LanguageSetting } from "../types/language";
+import { SUPPORTED_LANGUAGES, countServicesForLanguage, getLanguageName } from "../data/languages";
 import { AddAPIServiceModal } from "./AddAPIServiceModal";
 import { getAPIServiceInfo, BUILTIN_SERVICE_TYPES } from "../services/SynonymService";
+import { BUILTIN_SERVICE_LANGUAGES } from "../data/languages";
 import { createServiceIcon } from "../utils/serviceIcons";
 
 // Labels for displaying supported types
@@ -49,6 +52,9 @@ export class SynonymSettingsTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           })
       );
+
+    // Language settings section
+    this.addLanguageSettings(containerEl);
 
     new Setting(containerEl).setName("Data sources").setHeading();
 
@@ -167,6 +173,10 @@ export class SynonymSettingsTab extends PluginSettingTab {
         const supportedTypes = BUILTIN_SERVICE_TYPES[source.id];
         const typesEl = contentEl.createDiv({ cls: "wordsmith-source-types" });
         typesEl.setText(`Supports: ${this.formatSupportedTypes(supportedTypes)}`);
+
+        // Show language count
+        const langsEl = contentEl.createDiv({ cls: "wordsmith-source-languages" });
+        langsEl.setText(`Languages: ${this.formatLanguageCount(source.id)}`);
       } else if (isAPISource(source)) {
         const nameRow = contentEl.createDiv({ cls: "wordsmith-source-name-row" });
         const keyBadge = nameRow.createSpan({ cls: "wordsmith-key-badge" });
@@ -181,6 +191,10 @@ export class SynonymSettingsTab extends PluginSettingTab {
         // Show supported types
         const typesEl = contentEl.createDiv({ cls: "wordsmith-source-types" });
         typesEl.setText(`Supports: ${this.formatSupportedTypes(serviceInfo.supportedTypes)}`);
+
+        // Show language count
+        const langsEl = contentEl.createDiv({ cls: "wordsmith-source-languages" });
+        langsEl.setText(`Languages: ${this.formatLanguageCount(source.config.type)}`);
       }
 
       // Actions container (delete button for API services)
@@ -428,5 +442,145 @@ export class SynonymSettingsTab extends PluginSettingTab {
    */
   private formatSupportedTypes(types: RelationshipType[]): string {
     return types.map(t => TYPE_DISPLAY_LABELS[t]).join(", ");
+  }
+
+  /**
+   * Add language settings section.
+   */
+  private addLanguageSettings(containerEl: HTMLElement): void {
+    new Setting(containerEl).setName("Language").setHeading();
+
+    // Build language options for dropdown
+    const languageOptions: Record<string, string> = {
+      default: "Default (Obsidian locale)",
+      auto: "Auto-detect",
+    };
+    for (const lang of SUPPORTED_LANGUAGES) {
+      languageOptions[lang.code] = `${lang.name} (${lang.nativeName})`;
+    }
+
+    // Main language dropdown
+    new Setting(containerEl)
+      .setName("Language")
+      // eslint-disable-next-line obsidianmd/ui/sentence-case
+      .setDesc("Language for word lookups. 'Default' uses your Obsidian locale. 'Auto-detect' analyzes the text around your cursor.")
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOptions(languageOptions)
+          .setValue(this.plugin.settings.language)
+          .onChange(async (value) => {
+            this.plugin.settings.language = value as LanguageSetting;
+            await this.plugin.saveSettings();
+            // Re-render to show/hide fallback setting and update warning
+            this.display();
+          })
+      );
+
+    // Fallback language dropdown (only shown when auto-detect is selected)
+    if (this.plugin.settings.language === "auto") {
+      const fallbackOptions: Record<string, string> = {};
+      for (const lang of SUPPORTED_LANGUAGES) {
+        fallbackOptions[lang.code] = `${lang.name} (${lang.nativeName})`;
+      }
+
+      new Setting(containerEl)
+        .setName("Fallback language")
+        .setDesc("Language to use when auto-detection fails (text too short or unrecognized)")
+        .addDropdown((dropdown) =>
+          dropdown
+            .addOptions(fallbackOptions)
+            .setValue(this.plugin.settings.fallbackLanguage)
+            .onChange(async (value) => {
+              this.plugin.settings.fallbackLanguage = value as LanguageCode;
+              await this.plugin.saveSettings();
+            })
+        );
+    }
+
+    // Show warning if selected language has limited service support
+    const selectedLang = this.plugin.settings.language;
+    if (selectedLang !== "default" && selectedLang !== "auto") {
+      const enabledServiceIds = this.getEnabledServiceIds();
+      const supportCount = countServicesForLanguage(selectedLang, enabledServiceIds);
+      const totalEnabled = enabledServiceIds.length;
+
+      if (supportCount < totalEnabled && supportCount > 0) {
+        const warningEl = containerEl.createEl("p", {
+          cls: "setting-item-description wordsmith-language-warning",
+        });
+        const langName = getLanguageName(selectedLang);
+        const warningIcon = warningEl.createSpan({ cls: "wordsmith-warning-icon", text: "⚠️" });
+        warningIcon.appendText(` Limited support: ${supportCount} of ${totalEnabled} enabled services support ${langName}`);
+      } else if (supportCount === 0) {
+        const warningEl = containerEl.createEl("p", {
+          cls: "setting-item-description wordsmith-language-error",
+        });
+        const langName = getLanguageName(selectedLang);
+        const warningIcon = warningEl.createSpan({ cls: "wordsmith-warning-icon", text: "❌" });
+        warningIcon.appendText(` No enabled services support ${langName}. Enable Free Dictionary or Altervista for multi-language support.`);
+      }
+    }
+
+    // Advanced: Frontmatter property name (collapsible)
+    const advancedDetails = containerEl.createEl("details", { cls: "wordsmith-advanced-settings" });
+    advancedDetails.createEl("summary", { text: "Advanced" });
+
+    const advancedContent = advancedDetails.createDiv();
+    new Setting(advancedContent)
+      .setName("Frontmatter property")
+      .setDesc("The frontmatter property name used to specify language per-document (e.g., 'lang: es')")
+      .addText((text) =>
+        text
+          // eslint-disable-next-line obsidianmd/ui/sentence-case
+          .setPlaceholder("lang")
+          .setValue(this.plugin.settings.frontmatterProperty)
+          .onChange(async (value) => {
+            this.plugin.settings.frontmatterProperty = value || "lang";
+            await this.plugin.saveSettings();
+          })
+      );
+  }
+
+  /**
+   * Get IDs of all enabled services (builtin and API).
+   */
+  private getEnabledServiceIds(): string[] {
+    const ids: string[] = [];
+    for (const source of this.plugin.settings.sources) {
+      if (!isSourceEnabled(source)) continue;
+      if (isBuiltinSource(source)) {
+        ids.push(source.id);
+      } else if (isAPISource(source)) {
+        ids.push(source.config.type);
+      }
+    }
+    return ids;
+  }
+
+  /**
+   * Get the number of languages a service supports.
+   */
+  private getServiceLanguageCount(serviceId: string): number {
+    if (serviceId in BUILTIN_SERVICE_LANGUAGES) {
+      return BUILTIN_SERVICE_LANGUAGES[serviceId as keyof typeof BUILTIN_SERVICE_LANGUAGES].length;
+    }
+    // Try to get API service info - if not found, assume English only
+    try {
+      const info = getAPIServiceInfo(serviceId as "merriam-webster" | "big-huge-thesaurus" | "words-api" | "api-ninjas" | "altervista" | "free-dictionary");
+      return info?.supportedLanguages?.length || 1;
+    } catch {
+      return 1;
+    }
+  }
+
+  /**
+   * Format language count for display in source list.
+   */
+  private formatLanguageCount(serviceId: string): string {
+    const count = this.getServiceLanguageCount(serviceId);
+    if (count === 1) {
+      return "English only";
+    }
+    return `${count} languages`;
   }
 }

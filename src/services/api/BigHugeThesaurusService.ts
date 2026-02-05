@@ -1,5 +1,6 @@
 import { requestUrl } from "obsidian";
 import { SynonymResult, RelationshipType } from "../../types/types";
+import { LanguageCode } from "../../types/language";
 import { SynonymService, API_SERVICE_INFO } from "../SynonymService";
 
 interface BigHugeThesaurusEntry {
@@ -29,7 +30,7 @@ export class BigHugeThesaurusService implements SynonymService {
     this.apiKey = apiKey;
   }
 
-  async lookup(word: string, maxResults: number, types?: RelationshipType[]): Promise<SynonymResult[]> {
+  async lookup(word: string, maxResults: number, types?: RelationshipType[], _language?: LanguageCode): Promise<SynonymResult[]> {
     const requestedTypes = types || ["synonym", "antonym", "related"];
     const url = `${BASE_URL}/${this.apiKey}/${encodeURIComponent(word)}/json`;
 
@@ -116,6 +117,10 @@ export class BigHugeThesaurusService implements SynonymService {
 
   supportedTypes(): RelationshipType[] {
     return API_SERVICE_INFO["big-huge-thesaurus"].supportedTypes;
+  }
+
+  supportedLanguages(): LanguageCode[] {
+    return API_SERVICE_INFO["big-huge-thesaurus"].supportedLanguages;
   }
 
   async validate(): Promise<{ valid: boolean; error?: string }> {

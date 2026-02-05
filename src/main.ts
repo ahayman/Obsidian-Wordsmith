@@ -1,5 +1,7 @@
 import { Editor, MarkdownFileInfo, MarkdownView, Notice, Plugin } from "obsidian";
 import { WordsmithSettings, DEFAULT_SETTINGS, SourceConfig, LookupCache, RelationshipType } from "./types/types";
+import { LanguageCode } from "./types/language";
+import { getLanguageName } from "./data/languages";
 import { DataService } from "./services/DataService";
 import { SynonymModal } from "./components/SynonymModal";
 import { SynonymSettingsTab } from "./components/SynonymSettingsTab";
@@ -42,6 +44,9 @@ function migrateSettings(old: OldSettings): WordsmithSettings {
     offlineSpellingOnly: DEFAULT_SETTINGS.offlineSpellingOnly,
     maxCacheSize: DEFAULT_SETTINGS.maxCacheSize,
     lookupCache: { entries: {}, version: 1 },
+    language: DEFAULT_SETTINGS.language,
+    fallbackLanguage: DEFAULT_SETTINGS.fallbackLanguage,
+    frontmatterProperty: DEFAULT_SETTINGS.frontmatterProperty,
   };
 }
 
@@ -80,6 +85,26 @@ function addSpellingFields(data: Record<string, unknown>): WordsmithSettings {
     ...data,
     nspellDownloaded: data.nspellDownloaded ?? DEFAULT_SETTINGS.nspellDownloaded,
     offlineSpellingOnly: data.offlineSpellingOnly ?? DEFAULT_SETTINGS.offlineSpellingOnly,
+  } as WordsmithSettings;
+}
+
+function needsLanguageMigration(data: unknown): boolean {
+  if (!data || typeof data !== "object") return false;
+  const obj = data as Record<string, unknown>;
+  // Check if it has the new format but missing language fields
+  return obj.sources !== undefined &&
+         Array.isArray(obj.sources) &&
+         obj.sources.length > 0 &&
+         "kind" in (obj.sources[0] as Record<string, unknown>) &&
+         (obj.language === undefined || obj.fallbackLanguage === undefined || obj.frontmatterProperty === undefined);
+}
+
+function addLanguageFields(data: Record<string, unknown>): WordsmithSettings {
+  return {
+    ...data,
+    language: (data.language as string) ?? DEFAULT_SETTINGS.language,
+    fallbackLanguage: (data.fallbackLanguage as LanguageCode) ?? DEFAULT_SETTINGS.fallbackLanguage,
+    frontmatterProperty: (data.frontmatterProperty as string) ?? DEFAULT_SETTINGS.frontmatterProperty,
   } as WordsmithSettings;
 }
 
@@ -190,6 +215,10 @@ export default class WordsmithPlugin extends Plugin {
       // Migrate settings that are missing spelling fields
       this.settings = addSpellingFields(loadedData as Record<string, unknown>);
       await this.saveData(this.settings);
+    } else if (needsLanguageMigration(loadedData)) {
+      // Migrate settings that are missing language fields
+      this.settings = addLanguageFields(loadedData as Record<string, unknown>);
+      await this.saveData(this.settings);
     } else if (loadedData && typeof loadedData === "object") {
       this.settings = Object.assign(
         {},
@@ -223,15 +252,44 @@ export default class WordsmithPlugin extends Plugin {
     }
 
     const { word, range } = extraction;
-    const tabMetadata = this.dataService.getEnabledTabMetadata(word);
+
+    // Get context for language detection
+    const contextText = this.getContextAroundCursor(editor);
+
+    // Resolve language
+    const resolved = this.dataService.resolveLanguage(contextText);
+
+    // Check if any services support this language
+    if (!this.dataService.hasServicesForLanguage(resolved.code)) {
+      const langName = getLanguageName(resolved.code);
+      new Notice(`No services support ${langName}. Enable Free Dictionary or Altervista for multi-language support.`);
+      return;
+    }
+
+    // Show notice if detection failed and using fallback
+    if (resolved.detectionFailed) {
+      const langName = getLanguageName(resolved.code);
+      new Notice(`Auto-detect failed, using ${langName}`, 2000);
+    }
+
+    // Get tabs filtered by language
+    const tabMetadata = this.dataService.getEnabledTabMetadata(word, resolved.code);
 
     if (tabMetadata.length === 0) {
       new Notice("No sources enabled");
       return;
     }
 
-    // Create and open modal immediately with initial type
-    const modal = new SynonymModal(this, word, range, tabMetadata, initialType);
+    // Create and open modal immediately with initial type and language
+    const modal = new SynonymModal(
+      this,
+      word,
+      range,
+      tabMetadata,
+      initialType,
+      resolved.code,
+      resolved.source
+    );
     modal.open();
 
     // Determine initial types to fetch based on the requested type
@@ -242,14 +300,15 @@ export default class WordsmithPlugin extends Plugin {
       initialTypes.push(initialType);
     }
 
-    // Start streaming lookup with initial types
+    // Start streaming lookup with initial types and language
     const { cancel } = this.dataService.lookupStreaming(
       word,
       {
         onSourceComplete: (sourceId, results) => modal.onSourceComplete(sourceId, results),
         onAllComplete: () => modal.onAllComplete(),
       },
-      initialTypes
+      initialTypes,
+      resolved.code
     );
 
     // Store original onClose, then wrap it to cancel on close
@@ -258,5 +317,25 @@ export default class WordsmithPlugin extends Plugin {
       cancel();
       originalOnClose();
     };
+  }
+
+  /**
+   * Get text around the cursor for language detection.
+   * Returns approximately ±2 lines of context.
+   */
+  private getContextAroundCursor(editor: Editor): string {
+    const cursor = editor.getCursor();
+    const lineCount = editor.lineCount();
+
+    // Get ±2 lines around cursor
+    const startLine = Math.max(0, cursor.line - 2);
+    const endLine = Math.min(lineCount - 1, cursor.line + 2);
+
+    const lines: string[] = [];
+    for (let i = startLine; i <= endLine; i++) {
+      lines.push(editor.getLine(i));
+    }
+
+    return lines.join(" ");
   }
 }

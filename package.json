@@ -4,11 +4,13 @@
   "description": "Obsidian plugin for finding synonyms and definitions of words",
   "main": "main.js",
   "dependencies": {
+    "franc-min": "^6.2.0",
     "nspell": "^2.1.5"
   },
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "build:copy": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && cp main.js manifest.json styles.css ~/Projects/Plugin\\ Test/.obsidian/plugins/wordsmith",
     "build:release": "sh ./release.sh",
     "lint": "eslint .",
     "test": "jest",

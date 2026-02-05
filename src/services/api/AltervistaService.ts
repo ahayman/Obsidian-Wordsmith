@@ -1,5 +1,6 @@
 import { requestUrl } from "obsidian";
 import { SynonymResult, RelationshipType } from "../../types/types";
+import { LanguageCode } from "../../types/language";
 import { SynonymService, API_SERVICE_INFO } from "../SynonymService";
 
 interface AltervistaList {
@@ -17,6 +18,25 @@ interface AltervistaResponse {
 
 const BASE_URL = "https://thesaurus.altervista.org/thesaurus/v1";
 
+// Map our language codes to Altervista API language parameter
+const LANGUAGE_PARAM_MAP: Record<string, string> = {
+  cs: "cs_CZ",
+  da: "da_DK",
+  de: "de_DE",
+  el: "el_GR",
+  en: "en_US",
+  es: "es_ES",
+  fr: "fr_FR",
+  hu: "hu_HU",
+  it: "it_IT",
+  no: "no_NO",
+  pl: "pl_PL",
+  "pt-BR": "pt_PT",  // Altervista uses pt_PT
+  ro: "ro_RO",
+  ru: "ru_RU",
+  sk: "sk_SK",
+};
+
 export class AltervistaService implements SynonymService {
   readonly id: string;
   readonly name = "Altervista";
@@ -28,9 +48,10 @@ export class AltervistaService implements SynonymService {
     this.apiKey = apiKey;
   }
 
-  async lookup(word: string, maxResults: number, types?: RelationshipType[]): Promise<SynonymResult[]> {
+  async lookup(word: string, maxResults: number, types?: RelationshipType[], language: LanguageCode = "en"): Promise<SynonymResult[]> {
     const requestedTypes = types || ["synonym", "antonym"];
-    const url = `${BASE_URL}?word=${encodeURIComponent(word)}&language=en_US&key=${encodeURIComponent(this.apiKey)}&output=json`;
+    const langParam = LANGUAGE_PARAM_MAP[language] || "en_US";
+    const url = `${BASE_URL}?word=${encodeURIComponent(word)}&language=${langParam}&key=${encodeURIComponent(this.apiKey)}&output=json`;
 
     const response = await requestUrl({ url });
     const data = response.json as AltervistaResponse;
@@ -100,6 +121,10 @@ export class AltervistaService implements SynonymService {
 
   supportedTypes(): RelationshipType[] {
     return API_SERVICE_INFO["altervista"].supportedTypes;
+  }
+
+  supportedLanguages(): LanguageCode[] {
+    return API_SERVICE_INFO["altervista"].supportedLanguages;
   }
 
   private parseCategory(category: string | undefined): string | undefined {

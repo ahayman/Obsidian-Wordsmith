@@ -1,4 +1,5 @@
 import { Editor, EditorPosition } from "obsidian";
+import { LanguageCode, LanguageSetting } from "./language";
 
 // Relationship types for word lookups
 export type RelationshipType = "synonym" | "antonym" | "related" | "hypernym" | "hyponym";
@@ -106,6 +107,10 @@ export interface WordsmithSettings {
   offlineSpellingOnly: boolean;
   maxCacheSize: number;
   lookupCache: LookupCache;
+  // Language settings
+  language: LanguageSetting;           // default: "default" (use Obsidian locale)
+  fallbackLanguage: LanguageCode;      // default: "en" (used when auto-detect fails)
+  frontmatterProperty: string;         // default: "lang" (frontmatter property name)
 }
 
 export const DEFAULT_SETTINGS: WordsmithSettings = {
@@ -123,6 +128,10 @@ export const DEFAULT_SETTINGS: WordsmithSettings = {
     entries: {},
     version: 1,
   },
+  // Language defaults
+  language: "default",
+  fallbackLanguage: "en",
+  frontmatterProperty: "lang",
 };
 
 // Helper functions for working with SourceConfig
