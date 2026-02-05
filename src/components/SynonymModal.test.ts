@@ -1,15 +1,15 @@
 import { SynonymModal } from "./SynonymModal";
-import { TabMetadata, SynonymResult, WordRange, RelationshipType } from "./types";
-import WordsmithPlugin from "./main";
+import { TabMetadata, SynonymResult, WordRange, RelationshipType } from "../types/types";
+import WordsmithPlugin from "../main";
 import { App, Modal, Platform } from "obsidian";
 
 // Mock wordExtractor
-jest.mock("./utils/wordExtractor", () => ({
+jest.mock("../utils/wordExtractor", () => ({
   replaceWord: jest.fn(),
 }));
 
 // Mock serviceIcons
-jest.mock("./utils/serviceIcons", () => ({
+jest.mock("../utils/serviceIcons", () => ({
   createServiceIcon: jest.fn((parent: HTMLElement, _iconId: string, _size: number) => {
     const iconEl = document.createElement("span");
     iconEl.classList.add("wordsmith-service-icon");

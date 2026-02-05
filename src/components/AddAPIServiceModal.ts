@@ -1,12 +1,12 @@
 import { Modal, Setting, setIcon } from "obsidian";
-import WordsmithPlugin from "./main";
-import { APIServiceConfig, APIServiceType } from "./types";
+import WordsmithPlugin from "../main";
+import { APIServiceConfig, APIServiceType } from "../types/types";
 import {
   API_SERVICE_INFO,
   getAllAPIServiceTypes,
   getAPIServiceInfo,
-} from "./services/SynonymService";
-import { createAPIServiceForValidation } from "./services/api";
+} from "../services/SynonymService";
+import { createAPIServiceForValidation } from "../services/api";
 
 export class AddAPIServiceModal extends Modal {
   private plugin: WordsmithPlugin;

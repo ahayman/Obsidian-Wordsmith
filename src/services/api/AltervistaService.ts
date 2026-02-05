@@ -1,5 +1,5 @@
 import { requestUrl } from "obsidian";
-import { SynonymResult, RelationshipType } from "../../types";
+import { SynonymResult, RelationshipType } from "../../types/types";
 import { SynonymService, API_SERVICE_INFO } from "../SynonymService";
 
 interface AltervistaList {

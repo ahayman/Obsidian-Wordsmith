@@ -1,5 +1,5 @@
 import { CacheService } from "./CacheService";
-import { LookupCache, SynonymResult, ServiceCacheData } from "../types";
+import { LookupCache, SynonymResult, ServiceCacheData } from "../types/types";
 
 function createMockResults(word: string): SynonymResult[] {
   return [{ word: `${word}-synonym`, type: "synonym", source: "wordnet" }];

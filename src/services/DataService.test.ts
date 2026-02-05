@@ -12,7 +12,7 @@ import {
   SynonymResult,
   DEFAULT_SETTINGS,
   StreamingLookupCallbacks,
-} from "../types";
+} from "../types/types";
 
 // Mock all the services
 jest.mock("./WordNetService");

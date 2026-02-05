@@ -4,7 +4,7 @@
 
 import { App, Editor, Notice, PluginManifest } from "obsidian";
 import WordsmithPlugin from "./main";
-import { DEFAULT_SETTINGS, WordsmithSettings, LookupCache } from "./types";
+import { DEFAULT_SETTINGS, WordsmithSettings, LookupCache } from "./types/types";
 
 // Mock Notice
 jest.mock("obsidian", () => {
@@ -32,7 +32,7 @@ jest.mock("./services/DataService", () => ({
 }));
 
 // Mock SynonymModal
-jest.mock("./SynonymModal", () => ({
+jest.mock("./components/SynonymModal", () => ({
   SynonymModal: jest.fn().mockImplementation(() => ({
     open: jest.fn(),
     onClose: jest.fn(),
@@ -42,12 +42,12 @@ jest.mock("./SynonymModal", () => ({
 }));
 
 // Mock SynonymSettingsTab
-jest.mock("./SynonymSettingsTab", () => ({
+jest.mock("./components/SynonymSettingsTab", () => ({
   SynonymSettingsTab: jest.fn().mockImplementation(() => ({})),
 }));
 
 // Mock QuickReplaceSuggest
-jest.mock("./QuickReplaceSuggest", () => ({
+jest.mock("./components/QuickReplaceSuggest", () => ({
   QuickReplaceSuggest: jest.fn().mockImplementation(() => ({
     triggerForWord: jest.fn().mockResolvedValue(undefined),
   })),
@@ -60,9 +60,9 @@ jest.mock("./utils/wordExtractor", () => ({
 }));
 
 import { DataService } from "./services/DataService";
-import { SynonymModal } from "./SynonymModal";
-import { SynonymSettingsTab } from "./SynonymSettingsTab";
-import { QuickReplaceSuggest } from "./QuickReplaceSuggest";
+import { SynonymModal } from "./components/SynonymModal";
+import { SynonymSettingsTab } from "./components/SynonymSettingsTab";
+import { QuickReplaceSuggest } from "./components/QuickReplaceSuggest";
 import { getWordUnderCursor } from "./utils/wordExtractor";
 
 function createMockApp(): App {

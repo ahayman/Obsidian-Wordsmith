@@ -1,5 +1,5 @@
 import { App, PluginSettingTab, setIcon, Setting } from "obsidian";
-import WordsmithPlugin from "./main";
+import WordsmithPlugin from "../main";
 import {
   TAB_LABELS,
   TAB_DESCRIPTIONS,
@@ -8,10 +8,10 @@ import {
   isSourceEnabled,
   APIServiceConfig,
   RelationshipType,
-} from "./types";
+} from "../types/types";
 import { AddAPIServiceModal } from "./AddAPIServiceModal";
-import { getAPIServiceInfo, BUILTIN_SERVICE_TYPES } from "./services/SynonymService";
-import { createServiceIcon } from "./utils/serviceIcons";
+import { getAPIServiceInfo, BUILTIN_SERVICE_TYPES } from "../services/SynonymService";
+import { createServiceIcon } from "../utils/serviceIcons";
 
 // Labels for displaying supported types
 const TYPE_DISPLAY_LABELS: Record<RelationshipType, string> = {

@@ -1,4 +1,4 @@
-import { SynonymResult, WordsmithSettings } from "../types";
+import { SynonymResult, WordsmithSettings } from "../types/types";
 import { NSpellService } from "./NSpellService";
 import { DatamuseService } from "./DatamuseService";
 

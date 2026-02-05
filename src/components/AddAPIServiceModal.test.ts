@@ -1,16 +1,16 @@
 import { App } from "obsidian";
 import { AddAPIServiceModal } from "./AddAPIServiceModal";
-import { APIServiceConfig, APIServiceType } from "./types";
+import { APIServiceConfig, APIServiceType } from "../types/types";
 
 // Mock the API service creation
-jest.mock("./services/api", () => ({
+jest.mock("../services/api", () => ({
   createAPIServiceForValidation: jest.fn().mockReturnValue({
     validate: jest.fn().mockResolvedValue({ valid: true }),
   }),
 }));
 
 // Mock SynonymService
-jest.mock("./services/SynonymService", () => ({
+jest.mock("../services/SynonymService", () => ({
   API_SERVICE_INFO: {
     "free-dictionary": {
       type: "free-dictionary",
@@ -125,7 +125,7 @@ describe("AddAPIServiceModal", () => {
 
   beforeEach(() => {
     // Reset getAPIServiceInfo to default implementation
-    const { getAPIServiceInfo } = require("./services/SynonymService");
+    const { getAPIServiceInfo } = require("../services/SynonymService");
     getAPIServiceInfo.mockImplementation((type: string) => {
       const info: Record<string, { name: string; description: string; requiresKey: boolean; registrationUrl: string; registrationInstructions: string; supportedTypes: string[] }> = {
         "free-dictionary": {
@@ -237,7 +237,7 @@ describe("AddAPIServiceModal", () => {
 
     it("should render add button (disabled for paid services)", () => {
       // Mock merriam-webster which requires a key
-      const { getAPIServiceInfo } = require("./services/SynonymService");
+      const { getAPIServiceInfo } = require("../services/SynonymService");
       getAPIServiceInfo.mockReturnValue({
         name: "Merriam-Webster",
         requiresKey: true,
@@ -346,7 +346,7 @@ describe("AddAPIServiceModal", () => {
 
     it("should be visible for services that require a key", () => {
       // Mock merriam-webster which requires a key
-      const { getAPIServiceInfo } = require("./services/SynonymService");
+      const { getAPIServiceInfo } = require("../services/SynonymService");
       getAPIServiceInfo.mockReturnValue({
         name: "Merriam-Webster",
         requiresKey: true,
@@ -397,7 +397,7 @@ describe("AddAPIServiceModal", () => {
 
     it("should show error when validating without API key for paid services", async () => {
       // Mock the service info to require a key
-      const { getAPIServiceInfo } = require("./services/SynonymService");
+      const { getAPIServiceInfo } = require("../services/SynonymService");
       getAPIServiceInfo.mockReturnValue({
         name: "Merriam-Webster",
         requiresKey: true,
@@ -425,14 +425,14 @@ describe("AddAPIServiceModal", () => {
     });
 
     it("should show loading state during validation", async () => {
-      const { createAPIServiceForValidation } = require("./services/api");
+      const { createAPIServiceForValidation } = require("../services/api");
       createAPIServiceForValidation.mockReturnValue({
         validate: jest.fn().mockImplementation(() => new Promise(resolve => {
           setTimeout(() => resolve({ valid: true }), 100);
         })),
       });
 
-      const { getAPIServiceInfo } = require("./services/SynonymService");
+      const { getAPIServiceInfo } = require("../services/SynonymService");
       getAPIServiceInfo.mockReturnValue({
         name: "Test Service",
         requiresKey: true,
@@ -464,12 +464,12 @@ describe("AddAPIServiceModal", () => {
     });
 
     it("should show success after valid API key validation", async () => {
-      const { createAPIServiceForValidation } = require("./services/api");
+      const { createAPIServiceForValidation } = require("../services/api");
       createAPIServiceForValidation.mockReturnValue({
         validate: jest.fn().mockResolvedValue({ valid: true }),
       });
 
-      const { getAPIServiceInfo } = require("./services/SynonymService");
+      const { getAPIServiceInfo } = require("../services/SynonymService");
       getAPIServiceInfo.mockReturnValue({
         name: "Test Service",
         requiresKey: true,
@@ -493,12 +493,12 @@ describe("AddAPIServiceModal", () => {
     });
 
     it("should show error after invalid API key validation", async () => {
-      const { createAPIServiceForValidation } = require("./services/api");
+      const { createAPIServiceForValidation } = require("../services/api");
       createAPIServiceForValidation.mockReturnValue({
         validate: jest.fn().mockResolvedValue({ valid: false, error: "Invalid API key" }),
       });
 
-      const { getAPIServiceInfo } = require("./services/SynonymService");
+      const { getAPIServiceInfo } = require("../services/SynonymService");
       getAPIServiceInfo.mockReturnValue({
         name: "Test Service",
         requiresKey: true,
@@ -520,12 +520,12 @@ describe("AddAPIServiceModal", () => {
     });
 
     it("should handle validation errors gracefully", async () => {
-      const { createAPIServiceForValidation } = require("./services/api");
+      const { createAPIServiceForValidation } = require("../services/api");
       createAPIServiceForValidation.mockReturnValue({
         validate: jest.fn().mockRejectedValue(new Error("Network error")),
       });
 
-      const { getAPIServiceInfo } = require("./services/SynonymService");
+      const { getAPIServiceInfo } = require("../services/SynonymService");
       getAPIServiceInfo.mockReturnValue({
         name: "Test Service",
         requiresKey: true,
@@ -547,7 +547,7 @@ describe("AddAPIServiceModal", () => {
     });
 
     it("should disable validate button during validation", async () => {
-      const { createAPIServiceForValidation } = require("./services/api");
+      const { createAPIServiceForValidation } = require("../services/api");
       let resolveValidation: (value: { valid: boolean }) => void;
       createAPIServiceForValidation.mockReturnValue({
         validate: jest.fn().mockImplementation(() => new Promise(resolve => {
@@ -555,7 +555,7 @@ describe("AddAPIServiceModal", () => {
         })),
       });
 
-      const { getAPIServiceInfo } = require("./services/SynonymService");
+      const { getAPIServiceInfo } = require("../services/SynonymService");
       getAPIServiceInfo.mockReturnValue({
         name: "Test Service",
         requiresKey: true,
@@ -590,7 +590,7 @@ describe("AddAPIServiceModal", () => {
   describe("add button", () => {
     it("should be disabled when not validated (paid services)", () => {
       // Use a paid service that requires validation
-      const { getAPIServiceInfo } = require("./services/SynonymService");
+      const { getAPIServiceInfo } = require("../services/SynonymService");
       getAPIServiceInfo.mockReturnValue({
         name: "Merriam-Webster",
         requiresKey: true,
@@ -613,12 +613,12 @@ describe("AddAPIServiceModal", () => {
     });
 
     it("should be enabled after successful validation", async () => {
-      const { createAPIServiceForValidation } = require("./services/api");
+      const { createAPIServiceForValidation } = require("../services/api");
       createAPIServiceForValidation.mockReturnValue({
         validate: jest.fn().mockResolvedValue({ valid: true }),
       });
 
-      const { getAPIServiceInfo } = require("./services/SynonymService");
+      const { getAPIServiceInfo } = require("../services/SynonymService");
       getAPIServiceInfo.mockReturnValue({
         name: "Test Service",
         requiresKey: true,
@@ -641,7 +641,7 @@ describe("AddAPIServiceModal", () => {
     });
 
     it("should call onAdd callback with config when clicked", async () => {
-      const { getAPIServiceInfo } = require("./services/SynonymService");
+      const { getAPIServiceInfo } = require("../services/SynonymService");
       getAPIServiceInfo.mockReturnValue({
         name: "Free Dictionary",
         requiresKey: false,
@@ -675,7 +675,7 @@ describe("AddAPIServiceModal", () => {
     });
 
     it("should generate unique ID for new service", async () => {
-      const { getAPIServiceInfo } = require("./services/SynonymService");
+      const { getAPIServiceInfo } = require("../services/SynonymService");
       getAPIServiceInfo.mockReturnValue({
         name: "Free Dictionary",
         requiresKey: false,
@@ -703,7 +703,7 @@ describe("AddAPIServiceModal", () => {
     });
 
     it("should close modal after adding service", () => {
-      const { getAPIServiceInfo } = require("./services/SynonymService");
+      const { getAPIServiceInfo } = require("../services/SynonymService");
       getAPIServiceInfo.mockReturnValue({
         name: "Free Dictionary",
         requiresKey: false,
@@ -729,12 +729,12 @@ describe("AddAPIServiceModal", () => {
     });
 
     it("should include API key in config for paid services", async () => {
-      const { createAPIServiceForValidation } = require("./services/api");
+      const { createAPIServiceForValidation } = require("../services/api");
       createAPIServiceForValidation.mockReturnValue({
         validate: jest.fn().mockResolvedValue({ valid: true }),
       });
 
-      const { getAPIServiceInfo } = require("./services/SynonymService");
+      const { getAPIServiceInfo } = require("../services/SynonymService");
       getAPIServiceInfo.mockReturnValue({
         name: "Merriam-Webster",
         requiresKey: true,
@@ -806,7 +806,7 @@ describe("AddAPIServiceModal", () => {
 
   describe("instructions display", () => {
     it("should show instructions for current service type", () => {
-      const { getAPIServiceInfo } = require("./services/SynonymService");
+      const { getAPIServiceInfo } = require("../services/SynonymService");
       getAPIServiceInfo.mockReturnValue({
         name: "Merriam-Webster",
         requiresKey: true,
@@ -825,7 +825,7 @@ describe("AddAPIServiceModal", () => {
     });
 
     it("should show registration link when URL is provided", () => {
-      const { getAPIServiceInfo } = require("./services/SynonymService");
+      const { getAPIServiceInfo } = require("../services/SynonymService");
       getAPIServiceInfo.mockReturnValue({
         name: "Merriam-Webster",
         requiresKey: true,
@@ -846,7 +846,7 @@ describe("AddAPIServiceModal", () => {
     });
 
     it("should not show registration link for free services", () => {
-      const { getAPIServiceInfo } = require("./services/SynonymService");
+      const { getAPIServiceInfo } = require("../services/SynonymService");
       getAPIServiceInfo.mockReturnValue({
         name: "Free Dictionary",
         requiresKey: false,
@@ -867,7 +867,7 @@ describe("AddAPIServiceModal", () => {
 
   describe("validation reset", () => {
     it("should reset validation when service type changes", async () => {
-      const { getAPIServiceInfo } = require("./services/SynonymService");
+      const { getAPIServiceInfo } = require("../services/SynonymService");
       getAPIServiceInfo.mockReturnValue({
         name: "Test Service",
         requiresKey: true,
@@ -930,7 +930,7 @@ describe("AddAPIServiceModal", () => {
 
     serviceTypes.forEach(serviceType => {
       it(`should handle ${serviceType} service type`, () => {
-        const { getAPIServiceInfo } = require("./services/SynonymService");
+        const { getAPIServiceInfo } = require("../services/SynonymService");
         getAPIServiceInfo.mockReturnValue({
           name: serviceType,
           requiresKey: serviceType !== "free-dictionary",

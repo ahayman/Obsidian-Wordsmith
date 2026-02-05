@@ -4,7 +4,7 @@ import {
   getGroupDisplayDefinition,
   hasDisplayableDefinition,
 } from "./definitionGrouping";
-import { SynonymResult, DefinitionGroup } from "../types";
+import { SynonymResult, DefinitionGroup } from "../types/types";
 
 // Helper factory for creating SynonymResult objects
 function createResult(overrides: Partial<SynonymResult> = {}): SynonymResult {

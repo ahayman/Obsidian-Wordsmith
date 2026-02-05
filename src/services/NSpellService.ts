@@ -1,5 +1,5 @@
 import { App, requestUrl } from "obsidian";
-import { SynonymResult, ProgressCallback } from "../types";
+import { SynonymResult, ProgressCallback } from "../types/types";
 import nspell from "nspell";
 
 type NSpellInstance = ReturnType<typeof nspell>;

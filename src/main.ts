@@ -1,10 +1,10 @@
 import { Editor, MarkdownFileInfo, MarkdownView, Notice, Plugin } from "obsidian";
-import { WordsmithSettings, DEFAULT_SETTINGS, SourceConfig, LookupCache, RelationshipType } from "./types";
+import { WordsmithSettings, DEFAULT_SETTINGS, SourceConfig, LookupCache, RelationshipType } from "./types/types";
 import { DataService } from "./services/DataService";
-import { SynonymModal } from "./SynonymModal";
-import { SynonymSettingsTab } from "./SynonymSettingsTab";
+import { SynonymModal } from "./components/SynonymModal";
+import { SynonymSettingsTab } from "./components/SynonymSettingsTab";
 import { getWordUnderCursor } from "./utils/wordExtractor";
-import { QuickReplaceSuggest } from "./QuickReplaceSuggest";
+import { QuickReplaceSuggest } from "./components/QuickReplaceSuggest";
 
 // Old settings format for migration
 interface OldSourceConfig {

@@ -1,4 +1,4 @@
-import { APIServiceConfig, APIServiceType } from "../../types";
+import { APIServiceConfig, APIServiceType } from "../../types/types";
 import { SynonymService, API_SERVICE_INFO } from "../SynonymService";
 import { FreeDictionaryService } from "./FreeDictionaryService";
 import { MerriamWebsterService } from "./MerriamWebsterService";

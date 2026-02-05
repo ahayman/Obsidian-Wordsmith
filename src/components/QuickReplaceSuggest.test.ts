@@ -1,14 +1,14 @@
 import { App, Editor, EditorPosition } from "obsidian";
 import { QuickReplaceSuggest } from "./QuickReplaceSuggest";
-import { DataService } from "./services/DataService";
-import { SynonymResult, DefinitionGroup } from "./types";
-import * as wordExtractor from "./utils/wordExtractor";
-import * as definitionGrouping from "./utils/definitionGrouping";
+import { DataService } from "../services/DataService";
+import { SynonymResult, DefinitionGroup } from "../types/types";
+import * as wordExtractor from "../utils/wordExtractor";
+import * as definitionGrouping from "../utils/definitionGrouping";
 
 // Mock the modules
-jest.mock("./services/DataService");
-jest.mock("./utils/wordExtractor");
-jest.mock("./utils/definitionGrouping");
+jest.mock("../services/DataService");
+jest.mock("../utils/wordExtractor");
+jest.mock("../utils/definitionGrouping");
 
 // Mock Notice to track calls
 const mockNotice = jest.fn();

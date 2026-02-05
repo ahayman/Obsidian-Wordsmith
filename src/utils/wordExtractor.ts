@@ -1,5 +1,5 @@
 import { Editor } from "obsidian";
-import { WordExtractionResult, WordRange } from "../types";
+import { WordExtractionResult, WordRange } from "../types/types";
 
 export function getWordUnderCursor(editor: Editor): WordExtractionResult | null {
   const selection = editor.getSelection();

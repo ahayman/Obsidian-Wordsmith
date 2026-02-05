@@ -1,4 +1,4 @@
-import { SynonymResult, DefinitionGroup, GroupedResults } from "../types";
+import { SynonymResult, DefinitionGroup, GroupedResults } from "../types/types";
 
 /**
  * Groups synonym results by their definitionId.

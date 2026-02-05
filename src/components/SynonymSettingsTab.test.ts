@@ -1,7 +1,7 @@
 import { App } from "obsidian";
 import { SynonymSettingsTab } from "./SynonymSettingsTab";
-import { WordsmithSettings, DEFAULT_SETTINGS } from "./types";
-import { CacheService } from "./services/CacheService";
+import { WordsmithSettings, DEFAULT_SETTINGS } from "../types/types";
+import { CacheService } from "../services/CacheService";
 
 // Mock the AddAPIServiceModal
 jest.mock("./AddAPIServiceModal", () => ({
@@ -12,7 +12,7 @@ jest.mock("./AddAPIServiceModal", () => ({
 }));
 
 // Mock serviceIcons to avoid DOMParser issues
-jest.mock("./utils/serviceIcons", () => ({
+jest.mock("../utils/serviceIcons", () => ({
   createServiceIcon: jest.fn((container: HTMLElement, serviceId: string) => {
     const span = document.createElement("span");
     span.setAttribute("data-service-icon", serviceId);
@@ -22,7 +22,7 @@ jest.mock("./utils/serviceIcons", () => ({
 }));
 
 // Mock SynonymService for builtin service types
-jest.mock("./services/SynonymService", () => ({
+jest.mock("../services/SynonymService", () => ({
   getAPIServiceInfo: jest.fn((type: string) => ({
     name: type === "merriam-webster" ? "Merriam-Webster" : "Free Dictionary",
     description: "Test description",
@@ -1080,7 +1080,7 @@ describe("SynonymSettingsTab", () => {
 
   describe("source icons", () => {
     it("should render service icons for each source", () => {
-      const { createServiceIcon } = require("./utils/serviceIcons");
+      const { createServiceIcon } = require("../utils/serviceIcons");
 
       settingsTab.display();
 
@@ -1089,7 +1089,7 @@ describe("SynonymSettingsTab", () => {
     });
 
     it("should call createServiceIcon with correct service id for builtin sources", () => {
-      const { createServiceIcon } = require("./utils/serviceIcons");
+      const { createServiceIcon } = require("../utils/serviceIcons");
 
       settingsTab.display();
 
@@ -1102,7 +1102,7 @@ describe("SynonymSettingsTab", () => {
     });
 
     it("should call createServiceIcon with API service type for API sources", () => {
-      const { createServiceIcon } = require("./utils/serviceIcons");
+      const { createServiceIcon } = require("../utils/serviceIcons");
 
       mockPlugin.settings.sources.push({
         kind: "api",

@@ -1,6 +1,6 @@
 import { Editor } from "obsidian";
 import { getWordUnderCursor, replaceWord } from "./wordExtractor";
-import { WordRange } from "../types";
+import { WordRange } from "../types/types";
 
 // Mock Editor factory
 function createMockEditor(overrides: Partial<Editor> = {}): Editor {

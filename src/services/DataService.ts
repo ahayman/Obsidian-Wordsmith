@@ -14,7 +14,7 @@ import {
   StreamingLookupHandle,
   RelationshipType,
   ALL_RELATIONSHIP_TYPES,
-} from "../types";
+} from "../types/types";
 import { WordNetService } from "./WordNetService";
 import { MobyService } from "./MobyService";
 import { DatamuseService } from "./DatamuseService";

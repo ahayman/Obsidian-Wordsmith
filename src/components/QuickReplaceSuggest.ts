@@ -1,8 +1,8 @@
 import { App, Editor, Notice } from "obsidian";
-import { SynonymResult, WordRange, RelationshipType, DefinitionGroup } from "./types";
-import { DataService } from "./services/DataService";
-import { getWordUnderCursor, replaceWord } from "./utils/wordExtractor";
-import { groupByDefinition, getGroupDisplayDefinition, hasDisplayableDefinition } from "./utils/definitionGrouping";
+import { SynonymResult, WordRange, RelationshipType, DefinitionGroup } from "../types/types";
+import { DataService } from "../services/DataService";
+import { getWordUnderCursor, replaceWord } from "../utils/wordExtractor";
+import { groupByDefinition, getGroupDisplayDefinition, hasDisplayableDefinition } from "../utils/definitionGrouping";
 
 interface QuickReplaceContext {
   word: string;

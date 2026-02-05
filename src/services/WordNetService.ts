@@ -1,5 +1,5 @@
 import { App, requestUrl } from "obsidian";
-import { SynonymResult, ThesaurusEntry, ProgressCallback } from "../types";
+import { SynonymResult, ThesaurusEntry, ProgressCallback } from "../types/types";
 
 export class WordNetService {
   private app: App;

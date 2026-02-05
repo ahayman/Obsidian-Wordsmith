@@ -1,5 +1,5 @@
 import { App, requestUrl } from "obsidian";
-import { SynonymResult, ProgressCallback } from "../types";
+import { SynonymResult, ProgressCallback } from "../types/types";
 
 export class MobyService {
   private app: App;

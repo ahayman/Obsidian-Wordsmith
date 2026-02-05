@@ -1,4 +1,4 @@
-import { SynonymResult, APIServiceType, RelationshipType } from "../types";
+import { SynonymResult, APIServiceType, RelationshipType } from "../types/types";
 
 export interface SynonymService {
   readonly id: string;
@@ -82,7 +82,7 @@ export const API_SERVICE_INFO: Record<APIServiceType, APIServiceInfo> = {
 };
 
 // Supported types for built-in services
-import { BuiltinTabId } from "../types";
+import { BuiltinTabId } from "../types/types";
 export const BUILTIN_SERVICE_TYPES: Record<BuiltinTabId, RelationshipType[]> = {
   local: ["synonym", "related"],  // WordNet + Moby have synonyms and related
   datamuse: ["synonym", "antonym", "related", "hypernym", "hyponym"],

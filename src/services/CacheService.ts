@@ -3,7 +3,7 @@ import {
   LookupCache,
   SynonymResult,
   RelationshipType,
-} from "../types";
+} from "../types/types";
 
 const CACHE_VERSION = 3; // Bumped for new cache structure
 

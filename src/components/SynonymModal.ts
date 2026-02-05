@@ -7,11 +7,11 @@ import {
   RelationshipType,
   GroupedResults,
   DefinitionGroup,
-} from "./types";
-import WordsmithPlugin from "./main";
-import { replaceWord } from "./utils/wordExtractor";
-import { createServiceIcon } from "./utils/serviceIcons";
-import { groupByDefinition, flattenVisibleResults, getGroupDisplayDefinition, hasDisplayableDefinition } from "./utils/definitionGrouping";
+} from "../types/types";
+import WordsmithPlugin from "../main";
+import { replaceWord } from "../utils/wordExtractor";
+import { createServiceIcon } from "../utils/serviceIcons";
+import { groupByDefinition, flattenVisibleResults, getGroupDisplayDefinition, hasDisplayableDefinition } from "../utils/definitionGrouping";
 
 // Labels for filter chips
 const TYPE_LABELS: Record<RelationshipType, string> = {

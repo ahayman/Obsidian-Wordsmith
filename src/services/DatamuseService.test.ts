@@ -1,6 +1,6 @@
 import { DatamuseService } from "./DatamuseService";
 import { requestUrl } from "obsidian";
-import { RelationshipType } from "../types";
+import { RelationshipType } from "../types/types";
 
 // Mock the obsidian module
 jest.mock("obsidian", () => ({

@@ -1,7 +1,7 @@
 import { SpellingService } from "./SpellingService";
 import { NSpellService } from "./NSpellService";
 import { DatamuseService } from "./DatamuseService";
-import { WordsmithSettings, DEFAULT_SETTINGS, SynonymResult } from "../types";
+import { WordsmithSettings, DEFAULT_SETTINGS, SynonymResult } from "../types/types";
 
 // Create mock classes
 jest.mock("./NSpellService");
