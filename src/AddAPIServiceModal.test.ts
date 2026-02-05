@@ -1,4 +1,4 @@
-import { App, MockDropdownComponent, MockTextComponent, Setting } from "obsidian";
+import { App } from "obsidian";
 import { AddAPIServiceModal } from "./AddAPIServiceModal";
 import { APIServiceConfig, APIServiceType } from "./types";
 
@@ -124,6 +124,30 @@ describe("AddAPIServiceModal", () => {
   let modal: AddAPIServiceModal;
 
   beforeEach(() => {
+    // Reset getAPIServiceInfo to default implementation
+    const { getAPIServiceInfo } = require("./services/SynonymService");
+    getAPIServiceInfo.mockImplementation((type: string) => {
+      const info: Record<string, { name: string; description: string; requiresKey: boolean; registrationUrl: string; registrationInstructions: string; supportedTypes: string[] }> = {
+        "free-dictionary": {
+          name: "Free Dictionary",
+          description: "Free dictionary API",
+          requiresKey: false,
+          registrationUrl: "",
+          registrationInstructions: "No API key required",
+          supportedTypes: ["synonym", "antonym"],
+        },
+        "merriam-webster": {
+          name: "Merriam-Webster",
+          description: "Collegiate Thesaurus API",
+          requiresKey: true,
+          registrationUrl: "https://dictionaryapi.com/register",
+          registrationInstructions: "Create a free account",
+          supportedTypes: ["synonym", "antonym"],
+        },
+      };
+      return info[type] || info["free-dictionary"];
+    });
+
     mockPlugin = createMockPlugin();
     onAddCallback = jest.fn();
     modal = new AddAPIServiceModal(
@@ -199,13 +223,41 @@ describe("AddAPIServiceModal", () => {
       expect(validateBtn?.classList.contains("mod-cta")).toBe(true);
     });
 
-    it("should render add button (initially disabled)", () => {
+    it("should render add button (enabled for free services)", () => {
+      // Default service is free-dictionary which doesn't require a key
       modal.open();
 
       const buttons = modal.contentEl.querySelectorAll("button");
       const addBtn = Array.from(buttons).find(b => b.textContent === "Add");
 
       expect(addBtn).not.toBeNull();
+      // For free services, the button should be enabled (auto-validated)
+      expect(addBtn?.disabled).toBe(false);
+    });
+
+    it("should render add button (disabled for paid services)", () => {
+      // Mock merriam-webster which requires a key
+      const { getAPIServiceInfo } = require("./services/SynonymService");
+      getAPIServiceInfo.mockReturnValue({
+        name: "Merriam-Webster",
+        requiresKey: true,
+        registrationUrl: "https://dictionaryapi.com/",
+        registrationInstructions: "Sign up for a free API key",
+        supportedTypes: ["synonym", "antonym"],
+      });
+
+      const newModal = new AddAPIServiceModal(
+        mockPlugin as unknown as Parameters<typeof AddAPIServiceModal.prototype.constructor>[0],
+        onAddCallback
+      );
+      (newModal as unknown as { selectedType: string }).selectedType = "merriam-webster";
+      newModal.open();
+
+      const buttons = newModal.contentEl.querySelectorAll("button");
+      const addBtn = Array.from(buttons).find(b => b.textContent === "Add");
+
+      expect(addBtn).not.toBeNull();
+      // For paid services, the button should be disabled until validated
       expect(addBtn?.disabled).toBe(true);
     });
 
@@ -240,13 +292,19 @@ describe("AddAPIServiceModal", () => {
       const select = modal.contentEl.querySelector("select") as HTMLSelectElement;
       const instructionsContainer = modal.contentEl.querySelector(".wordsmith-api-instructions");
 
+      // Get initial instructions text
+      const initialText = instructionsContainer?.textContent;
+
       // Change to merriam-webster
       select.value = "merriam-webster";
       select.dispatchEvent(new Event("change"));
 
-      // Note: In the actual implementation, onChange is handled by the mock Setting
-      // This test verifies the dropdown is present and interactive
+      // Verify select value changed
       expect(select.value).toBe("merriam-webster");
+
+      // Verify instructions container exists
+      expect(instructionsContainer).not.toBeNull();
+      expect(initialText).toBeDefined();
     });
 
     it("should have correct option values", () => {
@@ -275,15 +333,41 @@ describe("AddAPIServiceModal", () => {
   });
 
   describe("API key input", () => {
-    it("should be visible for services that require a key", () => {
+    it("should be hidden for services that do not require a key", () => {
       modal.open();
 
       // Default is free-dictionary which doesn't require a key
-      // The API key setting should be hidden initially
-
       const apiKeySetting = modal.contentEl.querySelector(".wordsmith-api-key-setting");
-      // For free-dictionary, should be hidden
-      // This depends on the implementation's class toggle
+
+      // For free-dictionary, API key setting should be hidden
+      expect(apiKeySetting).not.toBeNull();
+      expect(apiKeySetting?.classList.contains("wordsmith-hidden")).toBe(true);
+    });
+
+    it("should be visible for services that require a key", () => {
+      // Mock merriam-webster which requires a key
+      const { getAPIServiceInfo } = require("./services/SynonymService");
+      getAPIServiceInfo.mockReturnValue({
+        name: "Merriam-Webster",
+        requiresKey: true,
+        registrationUrl: "https://dictionaryapi.com/",
+        registrationInstructions: "Sign up for a free API key",
+        supportedTypes: ["synonym", "antonym"],
+      });
+
+      // Create a new modal with merriam-webster as the selected type
+      const newModal = new AddAPIServiceModal(
+        mockPlugin as unknown as Parameters<typeof AddAPIServiceModal.prototype.constructor>[0],
+        onAddCallback
+      );
+      (newModal as unknown as { selectedType: string }).selectedType = "merriam-webster";
+      newModal.open();
+
+      const apiKeySetting = newModal.contentEl.querySelector(".wordsmith-api-key-setting");
+
+      // For merriam-webster, API key setting should be visible
+      expect(apiKeySetting).not.toBeNull();
+      expect(apiKeySetting?.classList.contains("wordsmith-hidden")).toBe(false);
     });
 
     it("should have placeholder text", () => {
@@ -301,10 +385,14 @@ describe("AddAPIServiceModal", () => {
       // Free dictionary doesn't require a key, so add button should be enabled
       // after the modal processes the service type
       const buttons = modal.contentEl.querySelectorAll("button");
-      const addBtn = Array.from(buttons).find(b => b.textContent === "Add");
+      const addBtn = Array.from(buttons).find(b => b.textContent === "Add") as HTMLButtonElement;
 
-      // Note: The actual auto-validation happens in updateAPIKeyVisibility
-      // which is called during onOpen
+      // The add button should be enabled for free services (auto-validated)
+      expect(addBtn).not.toBeNull();
+      expect(addBtn?.disabled).toBe(false);
+
+      // Verify internal state is validated
+      expect((modal as unknown as { isValidated: boolean }).isValidated).toBe(true);
     });
 
     it("should show error when validating without API key for paid services", async () => {
@@ -500,10 +588,25 @@ describe("AddAPIServiceModal", () => {
   });
 
   describe("add button", () => {
-    it("should be disabled when not validated", () => {
-      modal.open();
+    it("should be disabled when not validated (paid services)", () => {
+      // Use a paid service that requires validation
+      const { getAPIServiceInfo } = require("./services/SynonymService");
+      getAPIServiceInfo.mockReturnValue({
+        name: "Merriam-Webster",
+        requiresKey: true,
+        registrationUrl: "https://dictionaryapi.com/",
+        registrationInstructions: "Sign up for a free API key",
+        supportedTypes: ["synonym", "antonym"],
+      });
 
-      const buttons = modal.contentEl.querySelectorAll("button");
+      const paidModal = new AddAPIServiceModal(
+        mockPlugin as unknown as Parameters<typeof AddAPIServiceModal.prototype.constructor>[0],
+        onAddCallback
+      );
+      (paidModal as unknown as { selectedType: string }).selectedType = "merriam-webster";
+      paidModal.open();
+
+      const buttons = paidModal.contentEl.querySelectorAll("button");
       const addBtn = Array.from(buttons).find(b => b.textContent === "Add");
 
       expect(addBtn?.disabled).toBe(true);

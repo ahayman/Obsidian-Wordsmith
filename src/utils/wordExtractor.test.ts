@@ -1,4 +1,4 @@
-import { Editor, EditorPosition } from "obsidian";
+import { Editor } from "obsidian";
 import { getWordUnderCursor, replaceWord } from "./wordExtractor";
 import { WordRange } from "../types";
 

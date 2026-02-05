@@ -1,7 +1,7 @@
 import { SynonymModal } from "./SynonymModal";
 import { TabMetadata, SynonymResult, WordRange, RelationshipType } from "./types";
 import WordsmithPlugin from "./main";
-import { App, Modal, Scope, Platform } from "obsidian";
+import { App, Modal, Platform } from "obsidian";
 
 // Mock wordExtractor
 jest.mock("./utils/wordExtractor", () => ({
@@ -824,7 +824,6 @@ describe("SynonymModal", () => {
       const mockEvent = { preventDefault: jest.fn() } as unknown as KeyboardEvent;
       modal.scope.triggerKey([], "ArrowDown", mockEvent);
 
-      const selected = modal.contentEl.querySelector(".is-selected");
       const suggestions = modal.contentEl.querySelectorAll(".wordsmith-suggestion");
       expect(suggestions[1]?.classList.contains("is-selected")).toBe(true);
     });

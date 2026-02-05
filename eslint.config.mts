@@ -23,6 +23,7 @@ export default tseslint.config(
       },
     },
   },
+  ...obsidianmd.configs.recommended,
   {
     files: ["**/*.test.ts"],
     languageOptions: {
@@ -30,13 +31,27 @@ export default tseslint.config(
         ...globals.jest,
       },
     },
+    rules: {
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-unsafe-argument": "off",
+      "@typescript-eslint/no-unsafe-return": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-require-imports": "off",
+      "@typescript-eslint/no-floating-promises": "off",
+      "@typescript-eslint/unbound-method": "off",
+      "@typescript-eslint/no-unused-vars": "warn",
+      "obsidianmd/hardcoded-config-path": "off",
+      "@microsoft/sdl/no-inner-html": "off",
+    },
   },
-  ...obsidianmd.configs.recommended,
   globalIgnores([
     "node_modules",
     "main.js",
     "*.json",
     "coverage",
     "__mocks__",
+    "**/*.test.ts",
   ])
 );

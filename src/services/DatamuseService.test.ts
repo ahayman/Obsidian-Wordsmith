@@ -594,7 +594,7 @@ describe("DatamuseService", () => {
         createMockDatamuseResponse([{ word: "happiness", score: 90 }])
       );
 
-      const result = await service.lookup("happy");
+      await service.lookup("happy");
 
       expect(mockRequestUrl).toHaveBeenCalledTimes(2);
       expect(mockRequestUrl).toHaveBeenCalledWith({
@@ -611,7 +611,7 @@ describe("DatamuseService", () => {
         createMockDatamuseResponse([{ word: "sad", score: 100 }])
       );
 
-      const result = await service.lookup("happy", ["antonym"]);
+      await service.lookup("happy", ["antonym"]);
 
       expect(mockRequestUrl).toHaveBeenCalledTimes(1);
       expect(mockRequestUrl).toHaveBeenCalledWith({

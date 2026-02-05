@@ -553,7 +553,7 @@ describe("NSpellService", () => {
       mockSpellInstance.correct.mockReturnValue(true);
 
       await service.load();
-      const result = service.isCorrect("hello-world");
+      service.isCorrect("hello-world");
 
       expect(mockSpellInstance.correct).toHaveBeenCalledWith("hello-world");
     });

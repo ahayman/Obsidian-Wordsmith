@@ -11,9 +11,7 @@ import {
   WordsmithSettings,
   SynonymResult,
   DEFAULT_SETTINGS,
-  SourceConfig,
   StreamingLookupCallbacks,
-  RelationshipType,
 } from "../types";
 
 // Mock all the services
@@ -627,7 +625,7 @@ describe("DataService", () => {
       const settings = createDefaultSettings();
       const service = new DataService(mockApp, "/test/plugin", settings);
 
-      const result = await service.getQuickReplaceSuggestions("test", "synonym");
+      await service.getQuickReplaceSuggestions("test", "synonym");
 
       // Should have looked up synonyms, not spelling
       expect(mockSpellingService.getSuggestions).not.toHaveBeenCalled();
@@ -663,7 +661,7 @@ describe("DataService", () => {
       settings.sources = [{ kind: "builtin", id: "datamuse", enabled: true }];
       const service = new DataService(mockApp, "/test/plugin", settings);
 
-      const result = await service.getQuickReplaceSuggestions("test", "antonym");
+      await service.getQuickReplaceSuggestions("test", "antonym");
 
       expect(mockDatamuse.lookup).toHaveBeenCalledWith("test", ["antonym"]);
     });
@@ -988,7 +986,7 @@ describe("DataService", () => {
       const settings = createDefaultSettings();
       const service = new DataService(mockApp, "/test/plugin", settings);
 
-      const result = await service.lookup("test-word");
+      await service.lookup("test-word");
 
       expect(mockWordNet.lookup).toHaveBeenCalledWith("test-word");
     });
@@ -1055,7 +1053,7 @@ describe("DataService", () => {
       settings.sources = [{ kind: "builtin", id: "local", enabled: true }];
       const service = new DataService(mockApp, "/test/plugin", settings);
 
-      const result = await service.lookup("test");
+      await service.lookup("test");
 
       expect(mockWordNet.lookup).not.toHaveBeenCalled();
     });
@@ -1068,7 +1066,7 @@ describe("DataService", () => {
       settings.sources = [{ kind: "builtin", id: "local", enabled: true }];
       const service = new DataService(mockApp, "/test/plugin", settings);
 
-      const result = await service.lookup("test");
+      await service.lookup("test");
 
       expect(mockMoby.lookup).not.toHaveBeenCalled();
     });

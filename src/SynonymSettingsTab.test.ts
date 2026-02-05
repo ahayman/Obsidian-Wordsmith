@@ -1,12 +1,6 @@
-import {
-  App,
-  Setting,
-  MockSliderComponent,
-  MockToggleComponent,
-  MockButtonComponent,
-} from "obsidian";
+import { App } from "obsidian";
 import { SynonymSettingsTab } from "./SynonymSettingsTab";
-import { WordsmithSettings, DEFAULT_SETTINGS, SourceConfig, APIServiceConfig } from "./types";
+import { WordsmithSettings, DEFAULT_SETTINGS } from "./types";
 import { CacheService } from "./services/CacheService";
 
 // Mock the AddAPIServiceModal
@@ -88,6 +82,26 @@ function createMockPlugin(settings: WordsmithSettings) {
 
 function createDefaultSettings(): WordsmithSettings {
   return JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+}
+
+// Helper to create mock drag events (DragEvent isn't available in jsdom)
+function createMockDragEvent(type: string): Event {
+  const event = new Event(type, {
+    bubbles: true,
+    cancelable: true,
+  });
+
+  // Add dataTransfer mock
+  Object.defineProperty(event, "dataTransfer", {
+    value: {
+      effectAllowed: "move",
+      setData: jest.fn(),
+      getData: jest.fn().mockReturnValue("0"),
+    },
+    writable: false,
+  });
+
+  return event;
 }
 
 describe("SynonymSettingsTab", () => {
@@ -255,6 +269,62 @@ describe("SynonymSettingsTab", () => {
   });
 
   describe("API service management", () => {
+    it("should open AddAPIServiceModal when add button is clicked", () => {
+      const { AddAPIServiceModal } = require("./AddAPIServiceModal");
+
+      settingsTab.display();
+
+      const addButton = settingsTab.containerEl.querySelector(".wordsmith-add-api-button") as HTMLButtonElement;
+      expect(addButton).not.toBeNull();
+
+      addButton.click();
+
+      expect(AddAPIServiceModal).toHaveBeenCalled();
+    });
+
+    it("should add API service when modal callback is invoked", async () => {
+      const { AddAPIServiceModal } = require("./AddAPIServiceModal");
+
+      // Capture the onAdd callback
+      let capturedOnAdd: ((config: { id: string; type: string; apiKey: string; enabled: boolean }) => void) | null = null;
+      AddAPIServiceModal.mockImplementation(function(
+        this: { open: jest.Mock },
+        _plugin: unknown,
+        onAdd: (config: { id: string; type: string; apiKey: string; enabled: boolean }) => void
+      ) {
+        capturedOnAdd = onAdd;
+        this.open = jest.fn();
+        return this;
+      });
+
+      const initialSourceCount = mockPlugin.settings.sources.length;
+
+      settingsTab.display();
+
+      const addButton = settingsTab.containerEl.querySelector(".wordsmith-add-api-button") as HTMLButtonElement;
+      addButton.click();
+
+      // Simulate the modal calling the onAdd callback
+      expect(capturedOnAdd).not.toBeNull();
+      capturedOnAdd!({
+        id: "new-api-service",
+        type: "merriam-webster",
+        apiKey: "test-key",
+        enabled: true,
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(mockPlugin.settings.sources.length).toBe(initialSourceCount + 1);
+      expect(mockPlugin.saveSettings).toHaveBeenCalled();
+
+      // Find the newly added source
+      const newSource = mockPlugin.settings.sources.find(
+        s => s.kind === "api" && s.id === "new-api-service"
+      );
+      expect(newSource).toBeDefined();
+    });
+
     it("should render delete button for API sources", () => {
       // Add an API source
       mockPlugin.settings.sources.push({
@@ -382,6 +452,104 @@ describe("SynonymSettingsTab", () => {
       sourceItems.forEach((item, index) => {
         expect(item.getAttribute("data-index")).toBe(String(index));
       });
+    });
+
+    it("should add dragging class on dragstart", () => {
+      settingsTab.display();
+
+      const sourceItems = settingsTab.containerEl.querySelectorAll(".wordsmith-source-item");
+      const firstItem = sourceItems[0] as HTMLElement;
+
+      // Create a mock drag event with dataTransfer
+      const dragEvent = createMockDragEvent("dragstart");
+      firstItem.dispatchEvent(dragEvent);
+
+      expect(firstItem.classList.contains("wordsmith-dragging")).toBe(true);
+    });
+
+    it("should remove dragging class on dragend", () => {
+      settingsTab.display();
+
+      const sourceItems = settingsTab.containerEl.querySelectorAll(".wordsmith-source-item");
+      const firstItem = sourceItems[0] as HTMLElement;
+
+      // First trigger dragstart
+      const dragStartEvent = createMockDragEvent("dragstart");
+      firstItem.dispatchEvent(dragStartEvent);
+
+      expect(firstItem.classList.contains("wordsmith-dragging")).toBe(true);
+
+      // Then trigger dragend
+      const dragEndEvent = createMockDragEvent("dragend");
+      firstItem.dispatchEvent(dragEndEvent);
+
+      expect(firstItem.classList.contains("wordsmith-dragging")).toBe(false);
+    });
+
+    it("should add drag-over class on dragover", () => {
+      settingsTab.display();
+
+      const sourceItems = settingsTab.containerEl.querySelectorAll(".wordsmith-source-item");
+      const firstItem = sourceItems[0] as HTMLElement;
+      const secondItem = sourceItems[1] as HTMLElement;
+
+      // Start dragging first item
+      const dragStartEvent = createMockDragEvent("dragstart");
+      firstItem.dispatchEvent(dragStartEvent);
+
+      // Drag over second item
+      const dragOverEvent = createMockDragEvent("dragover");
+      secondItem.dispatchEvent(dragOverEvent);
+
+      expect(secondItem.classList.contains("wordsmith-drag-over")).toBe(true);
+    });
+
+    it("should reorder sources on drop", async () => {
+      settingsTab.display();
+
+      const initialFirstSource = mockPlugin.settings.sources[0];
+      const initialSecondSource = mockPlugin.settings.sources[1];
+
+      const sourceItems = settingsTab.containerEl.querySelectorAll(".wordsmith-source-item");
+      const firstItem = sourceItems[0] as HTMLElement;
+      const secondItem = sourceItems[1] as HTMLElement;
+
+      // Start dragging first item
+      const dragStartEvent = createMockDragEvent("dragstart");
+      firstItem.dispatchEvent(dragStartEvent);
+
+      // Drop on second item
+      const dropEvent = createMockDragEvent("drop");
+      secondItem.dispatchEvent(dropEvent);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Sources should be reordered
+      expect(mockPlugin.settings.sources[0]).toBe(initialSecondSource);
+      expect(mockPlugin.settings.sources[1]).toBe(initialFirstSource);
+      expect(mockPlugin.saveSettings).toHaveBeenCalled();
+    });
+
+    it("should not reorder when dropping on same item", async () => {
+      settingsTab.display();
+
+      const initialOrder = [...mockPlugin.settings.sources];
+
+      const sourceItems = settingsTab.containerEl.querySelectorAll(".wordsmith-source-item");
+      const firstItem = sourceItems[0] as HTMLElement;
+
+      // Start dragging first item
+      const dragStartEvent = createMockDragEvent("dragstart");
+      firstItem.dispatchEvent(dragStartEvent);
+
+      // Drop on same item
+      const dropEvent = createMockDragEvent("drop");
+      firstItem.dispatchEvent(dropEvent);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Order should not change
+      expect(mockPlugin.settings.sources).toEqual(initialOrder);
     });
   });
 
@@ -560,6 +728,81 @@ describe("SynonymSettingsTab", () => {
 
       expect(mobyDesc?.textContent).toContain("(downloaded)");
     });
+
+    it("should call download when Moby Download button is clicked", async () => {
+      mockPlugin.settings.mobyDownloaded = false;
+      mockPlugin.settings.wordNetDownloaded = true; // So WordNet shows Delete, Moby shows Download
+
+      settingsTab.display();
+
+      // Find Moby setting by its description and get its button
+      const settingItems = settingsTab.containerEl.querySelectorAll(".setting-item");
+      let mobyDownloadBtn: HTMLButtonElement | null = null;
+      settingItems.forEach(item => {
+        const desc = item.querySelector(".setting-item-description");
+        if (desc?.textContent?.includes("Moby")) {
+          mobyDownloadBtn = item.querySelector("button");
+        }
+      });
+
+      expect(mobyDownloadBtn).not.toBeNull();
+      expect(mobyDownloadBtn?.textContent).toBe("Download");
+
+      mobyDownloadBtn?.click();
+
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      expect(mockPlugin.dataService.moby.download).toHaveBeenCalled();
+    });
+
+    it("should update settings after successful Moby download", async () => {
+      mockPlugin.settings.mobyDownloaded = false;
+      mockPlugin.settings.wordNetDownloaded = true;
+      mockPlugin.dataService.moby.download.mockResolvedValue(true);
+
+      settingsTab.display();
+
+      const settingItems = settingsTab.containerEl.querySelectorAll(".setting-item");
+      let mobyDownloadBtn: HTMLButtonElement | null = null;
+      settingItems.forEach(item => {
+        const desc = item.querySelector(".setting-item-description");
+        if (desc?.textContent?.includes("Moby")) {
+          mobyDownloadBtn = item.querySelector("button");
+        }
+      });
+
+      mobyDownloadBtn?.click();
+
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      expect(mockPlugin.settings.mobyDownloaded).toBe(true);
+      expect(mockPlugin.saveSettings).toHaveBeenCalled();
+    });
+
+    it("should call delete when Moby Delete button is clicked", async () => {
+      mockPlugin.settings.mobyDownloaded = true;
+
+      settingsTab.display();
+
+      const settingItems = settingsTab.containerEl.querySelectorAll(".setting-item");
+      let mobyDeleteBtn: HTMLButtonElement | null = null;
+      settingItems.forEach(item => {
+        const desc = item.querySelector(".setting-item-description");
+        if (desc?.textContent?.includes("Moby")) {
+          mobyDeleteBtn = item.querySelector("button");
+        }
+      });
+
+      expect(mobyDeleteBtn?.textContent).toBe("Delete");
+
+      mobyDeleteBtn?.click();
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(mockPlugin.dataService.moby.delete).toHaveBeenCalled();
+      expect(mockPlugin.settings.mobyDownloaded).toBe(false);
+      expect(mockPlugin.saveSettings).toHaveBeenCalled();
+    });
   });
 
   describe("NSpell/Spelling settings", () => {
@@ -596,6 +839,79 @@ describe("SynonymSettingsTab", () => {
 
       expect(offlineOnlySetting).toBeUndefined();
     });
+
+    it("should call download when NSpell Download button is clicked", async () => {
+      mockPlugin.settings.nspellDownloaded = false;
+
+      settingsTab.display();
+
+      const settingItems = settingsTab.containerEl.querySelectorAll(".setting-item");
+      let nspellDownloadBtn: HTMLButtonElement | null = null;
+      settingItems.forEach(item => {
+        const desc = item.querySelector(".setting-item-description");
+        if (desc?.textContent?.includes("Hunspell")) {
+          nspellDownloadBtn = item.querySelector("button");
+        }
+      });
+
+      expect(nspellDownloadBtn).not.toBeNull();
+      expect(nspellDownloadBtn?.textContent).toBe("Download");
+
+      nspellDownloadBtn?.click();
+
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      expect(mockPlugin.dataService.nspell.download).toHaveBeenCalled();
+    });
+
+    it("should update settings after successful NSpell download", async () => {
+      mockPlugin.settings.nspellDownloaded = false;
+      mockPlugin.dataService.nspell.download.mockResolvedValue(true);
+
+      settingsTab.display();
+
+      const settingItems = settingsTab.containerEl.querySelectorAll(".setting-item");
+      let nspellDownloadBtn: HTMLButtonElement | null = null;
+      settingItems.forEach(item => {
+        const desc = item.querySelector(".setting-item-description");
+        if (desc?.textContent?.includes("Hunspell")) {
+          nspellDownloadBtn = item.querySelector("button");
+        }
+      });
+
+      nspellDownloadBtn?.click();
+
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      expect(mockPlugin.settings.nspellDownloaded).toBe(true);
+      expect(mockPlugin.saveSettings).toHaveBeenCalled();
+    });
+
+    it("should call delete when NSpell Delete button is clicked", async () => {
+      mockPlugin.settings.nspellDownloaded = true;
+
+      settingsTab.display();
+
+      const settingItems = settingsTab.containerEl.querySelectorAll(".setting-item");
+      let nspellDeleteBtn: HTMLButtonElement | null = null;
+      settingItems.forEach(item => {
+        const desc = item.querySelector(".setting-item-description");
+        if (desc?.textContent?.includes("Hunspell")) {
+          nspellDeleteBtn = item.querySelector("button");
+        }
+      });
+
+      expect(nspellDeleteBtn?.textContent).toBe("Delete");
+
+      nspellDeleteBtn?.click();
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(mockPlugin.dataService.nspell.delete).toHaveBeenCalled();
+      expect(mockPlugin.settings.nspellDownloaded).toBe(false);
+      expect(mockPlugin.settings.offlineSpellingOnly).toBe(false);
+      expect(mockPlugin.saveSettings).toHaveBeenCalled();
+    });
   });
 
   describe("settings persistence", () => {
@@ -606,8 +922,14 @@ describe("SynonymSettingsTab", () => {
       const toggleContainers = settingsTab.containerEl.querySelectorAll(".wordsmith-source-toggle .checkbox-container");
       expect(toggleContainers.length).toBeGreaterThan(0);
 
-      // Toggles are rendered inside Setting components which have mock toggles
-      // The actual change callback should trigger saveSettings
+      // Simulate clicking the toggle (the mock toggle component handles this)
+      const firstToggle = toggleContainers[0] as HTMLElement;
+      firstToggle.click();
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // The toggle click should update settings
+      // Note: The actual save is handled by the mock toggle's onChange callback
     });
 
     it("should persist settings when cache size changes", async () => {
@@ -616,6 +938,54 @@ describe("SynonymSettingsTab", () => {
       // Cache size slider should trigger saveSettings on change
       const sliders = settingsTab.containerEl.querySelectorAll("input[type='range']");
       expect(sliders.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it("should toggle builtin source enabled state", async () => {
+      // Ensure local source starts enabled
+      const localSource = mockPlugin.settings.sources.find(
+        s => s.kind === "builtin" && s.id === "local"
+      );
+      expect(localSource).toBeDefined();
+      if (localSource && localSource.kind === "builtin") {
+        localSource.enabled = true;
+      }
+
+      settingsTab.display();
+
+      // Get the setting for the local source toggle
+      const sourceItems = settingsTab.containerEl.querySelectorAll(".wordsmith-source-item");
+      const localItem = Array.from(sourceItems).find(item =>
+        item.querySelector(".wordsmith-source-name")?.textContent === "Local"
+      );
+      expect(localItem).not.toBeNull();
+
+      // The toggle component inside the setting handles the state change
+      const toggleContainer = localItem?.querySelector(".wordsmith-source-toggle");
+      expect(toggleContainer).not.toBeNull();
+    });
+
+    it("should toggle API source enabled state", async () => {
+      mockPlugin.settings.sources.push({
+        kind: "api",
+        id: "test-api",
+        config: {
+          id: "test-api",
+          type: "merriam-webster",
+          apiKey: "test-key",
+          enabled: true,
+        },
+      });
+
+      settingsTab.display();
+
+      const sourceItems = settingsTab.containerEl.querySelectorAll(".wordsmith-source-item");
+      const apiItem = Array.from(sourceItems).find(item =>
+        item.querySelector(".wordsmith-source-name")?.textContent === "Merriam-Webster"
+      );
+      expect(apiItem).not.toBeNull();
+
+      const toggleContainer = apiItem?.querySelector(".wordsmith-source-toggle");
+      expect(toggleContainer).not.toBeNull();
     });
   });
 

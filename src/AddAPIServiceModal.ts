@@ -78,7 +78,6 @@ export class AddAPIServiceModal extends Modal {
       });
 
     apiKeySetting.settingEl.addClass("wordsmith-api-key-setting");
-    this.updateAPIKeyVisibility();
 
     // Validation status container
     this.statusContainerEl = contentEl.createDiv({
@@ -105,6 +104,9 @@ export class AddAPIServiceModal extends Modal {
     // Cancel button
     const cancelBtn = buttonsEl.createEl("button", { text: "Cancel" });
     cancelBtn.addEventListener("click", () => this.close());
+
+    // Update API key visibility (must be after buttons are created for auto-validation to work)
+    this.updateAPIKeyVisibility();
   }
 
   private updateInstructions(): void {
