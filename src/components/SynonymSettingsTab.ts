@@ -54,21 +54,23 @@ display(): void {
     containerEl.empty();
 
     // Language section
-    new Setting(containerEl).setName("Language").setHeading();
-    this.addLanguageSettings(containerEl);
+    const languageSection = containerEl.createDiv({ cls: "wordsmith-settings-section" });
+    new Setting(languageSection).setName("Language").setHeading();
+    this.addLanguageSettings(languageSection);
 
     // Data Sources section
-    new Setting(containerEl).setName("Data sources").setHeading();
+    const dataSourcesSection = containerEl.createDiv({ cls: "wordsmith-settings-section" });
+    new Setting(dataSourcesSection).setName("Data sources").setHeading();
     
-    containerEl.createEl("p", {
+    dataSourcesSection.createEl("p", {
       cls: "setting-item-description wordsmith-sources-desc",
       text: "Enable/disable sources and reorder them. The order here determines the tab order in the synonym modal.",
     });
 
-    this.renderSourcesList(containerEl);
+    this.renderSourcesList(dataSourcesSection);
 
     // Add API Service button
-    const addButtonContainer = containerEl.createDiv({
+    const addButtonContainer = dataSourcesSection.createDiv({
       cls: "wordsmith-add-api-container",
     });
 
@@ -86,24 +88,27 @@ display(): void {
     });
 
     // Local Data section
-    new Setting(containerEl).setName("Local data").setHeading();
-    this.addLocalDataSettings(containerEl);
+    const localDataSection = containerEl.createDiv({ cls: "wordsmith-settings-section" });
+    new Setting(localDataSection).setName("Local data").setHeading();
+    this.addLocalDataSettings(localDataSection);
 
     // Downloaded Dictionaries section
-    new Setting(containerEl).setName("Downloaded dictionaries").setHeading();
-    this.addNSpellSetting(containerEl);
-    this.addOfflineSpellingSetting(containerEl);
+    const dictionariesSection = containerEl.createDiv({ cls: "wordsmith-settings-section" });
+    new Setting(dictionariesSection).setName("Downloaded dictionaries").setHeading();
+    this.addNSpellSetting(dictionariesSection);
+    this.addOfflineSpellingSetting(dictionariesSection);
 
     // Options section
-    new Setting(containerEl).setName("Options").setHeading();
+    const optionsSection = containerEl.createDiv({ cls: "wordsmith-settings-section" });
+    new Setting(optionsSection).setName("Options").setHeading();
     
-    // Cache settings in Options section
+    // Cache settings in Options section - Combined Cache Size and Clear Cache
     const cacheService = this.plugin.dataService?.cacheService;
     const currentSize = cacheService?.size ?? 0;
 
-    new Setting(containerEl)
+    new Setting(optionsSection)
       .setName("Cache size")
-      .setDesc("Maximum number of words to cache (0 to disable caching)")
+      .setDesc(`Maximum number of words to cache (0 to disable caching). Currently caching ${currentSize} word${currentSize === 1 ? "" : "s"}`)
       .addSlider((slider) =>
         slider
           .setLimits(0, 1000, 50)
@@ -114,25 +119,20 @@ display(): void {
             await this.plugin.saveSettings();
             this.display();
           })
-      );
-
-    const clearSetting = new Setting(containerEl)
-      .setName("Clear cache")
-      .setDesc(`Currently caching ${currentSize} word${currentSize === 1 ? "" : "s"}`);
-
-    clearSetting.addButton((button) => {
-      button
-        .setButtonText("Clear")
-        .setDisabled(currentSize === 0)
-        .onClick(async () => {
-          cacheService?.clear();
-          await this.plugin.saveSettings();
-          this.display();
-        });
-    });
+      )
+      .addButton((button) => {
+        button
+          .setButtonText("Clear cache")
+          .setDisabled(currentSize === 0)
+          .onClick(async () => {
+            cacheService?.clear();
+            await this.plugin.saveSettings();
+            this.display();
+          });
+      });
 
     // Frontmatter property setting in Options section
-    new Setting(containerEl)
+    new Setting(optionsSection)
       .setName("Frontmatter property")
       .setDesc("The frontmatter property name used to specify language per-document (e.g., 'lang: es')")
       .addText((text) =>

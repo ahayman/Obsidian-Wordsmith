@@ -445,6 +445,33 @@
   margin-bottom: 12px;
 }
 
+/* Section grouping with themed backgrounds */
+.wordsmith-settings-section {
+  background-color: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.wordsmith-settings-section:last-child {
+  margin-bottom: 0;
+}
+
+/* Section headings */
+.wordsmith-settings-section h2 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 1.1em;
+  color: var(--text-normal);
+}
+
+/* Settings content spacing */
+.wordsmith-settings-content {
+  margin-top: 8px;
+}
+
 /* Drag and Drop Sources List */
 .wordsmith-sources-list {
   display: flex;
