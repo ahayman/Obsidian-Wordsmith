@@ -98,7 +98,7 @@ describe("AltervistaService", () => {
       });
     });
 
-    it("should skip entries with other annotations like (similar term)", async () => {
+    it("should strip annotations like (similar term) but keep the word", async () => {
       const service = createService();
       mockRequestUrl.mockResolvedValueOnce({
         json: {
@@ -119,9 +119,9 @@ describe("AltervistaService", () => {
 
       const results = await service.lookup("happiness", 50);
 
-      expect(results).toHaveLength(2);
+      expect(results).toHaveLength(3);
       expect(results.map((r) => r.word)).not.toContain("bliss (similar term)");
-      expect(results.map((r) => r.word)).not.toContain("bliss");
+      expect(results.map((r) => r.word)).toContain("bliss");
     });
 
     it("should parse different category formats", async () => {

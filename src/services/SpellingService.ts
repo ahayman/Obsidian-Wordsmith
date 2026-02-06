@@ -56,15 +56,15 @@ export class SpellingService {
       }
     }
 
-    return this.deduplicate(results, word);
+    return this.deduplicate(results, word, language);
   }
 
-  private deduplicate(results: SynonymResult[], originalWord: string): SynonymResult[] {
+  private deduplicate(results: SynonymResult[], originalWord: string, language: LanguageCode = "en"): SynonymResult[] {
     const seen = new Set<string>();
-    const normalizedOriginal = originalWord.toLowerCase();
+    const normalizedOriginal = originalWord.normalize("NFC").toLocaleLowerCase(language);
 
     return results.filter((r) => {
-      const key = r.word.toLowerCase();
+      const key = r.word.normalize("NFC").toLocaleLowerCase(language);
       // Filter out the original word and duplicates
       if (key === normalizedOriginal || seen.has(key)) {
         return false;

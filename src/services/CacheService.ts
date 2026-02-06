@@ -18,7 +18,7 @@ export class CacheService {
   }
 
   private normalizeKey(word: string, language: LanguageCode = "en"): string {
-    return `${word.toLowerCase().trim()}:${language}`;
+    return `${word.normalize("NFC").toLocaleLowerCase(language).trim()}:${language}`;
   }
 
   /**
@@ -34,7 +34,7 @@ export class CacheService {
     if (!entry || !entry.services || !(serviceId in entry.services)) {
       // Try legacy key format (without language) for backwards compatibility
       if (language === "en") {
-        const legacyKey = word.toLowerCase().trim();
+        const legacyKey = word.normalize("NFC").toLocaleLowerCase("en").trim();
         const legacyEntry = this.entries.get(legacyKey);
         if (legacyEntry?.services && serviceId in legacyEntry.services) {
           legacyEntry.lastAccessed = Date.now();
@@ -86,7 +86,7 @@ export class CacheService {
     if (!entry || !entry.services || !(serviceId in entry.services)) {
       // Try legacy key format for backwards compatibility
       if (language === "en") {
-        const legacyKey = word.toLowerCase().trim();
+        const legacyKey = word.normalize("NFC").toLocaleLowerCase("en").trim();
         const legacyEntry = this.entries.get(legacyKey);
         if (legacyEntry?.services && serviceId in legacyEntry.services) {
           const serviceData = legacyEntry.services[serviceId];
@@ -186,7 +186,7 @@ export class CacheService {
     const merged: SynonymResult[] = [];
 
     for (const r of existing) {
-      const key = `${r.type}:${r.word.toLowerCase()}`;
+      const key = `${r.type}:${r.word.normalize("NFC").toLowerCase()}`;
       if (!seen.has(key)) {
         seen.add(key);
         merged.push(r);
@@ -194,7 +194,7 @@ export class CacheService {
     }
 
     for (const r of newResults) {
-      const key = `${r.type}:${r.word.toLowerCase()}`;
+      const key = `${r.type}:${r.word.normalize("NFC").toLowerCase()}`;
       if (!seen.has(key)) {
         seen.add(key);
         merged.push(r);
@@ -240,7 +240,7 @@ export class CacheService {
     if (!entry || !entry.services) {
       // Check legacy key format for backwards compatibility
       if (language === "en") {
-        const legacyKey = word.toLowerCase().trim();
+        const legacyKey = word.normalize("NFC").toLocaleLowerCase("en").trim();
         const legacyEntry = this.entries.get(legacyKey);
         if (legacyEntry?.services) {
           return serviceIds.filter((id) => !(id in legacyEntry.services));

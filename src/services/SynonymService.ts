@@ -107,7 +107,7 @@ export const API_SERVICE_INFO: Record<APIServiceType, APIServiceInfo> = {
     requiresKey: false,
     registrationUrl: "",
     registrationInstructions: "No API key required. This service is free and open.",
-    supportedTypes: ["synonym", "antonym"],
+    supportedTypes: ["synonym", "antonym", "related"],
     supportedLanguages: API_SERVICE_LANGUAGES["wiktionary"],
   },
   "yandex-dictionary": {

@@ -57,7 +57,8 @@ export function replaceWord(
 function matchCapitalization(original: string, replacement: string): string {
   if (!original || !replacement) return replacement;
 
-  const firstChar = original.charAt(0);
+  // Use spread to correctly handle surrogate pairs (emoji, rare CJK)
+  const firstChar = [...original][0] ?? "";
 
   // Check if the entire original is uppercase (e.g., "HELLO")
   if (original === original.toUpperCase() && original !== original.toLowerCase()) {
@@ -66,7 +67,8 @@ function matchCapitalization(original: string, replacement: string): string {
 
   // Check if first letter is uppercase (e.g., "Hello")
   if (firstChar !== firstChar.toLowerCase()) {
-    return replacement.charAt(0).toUpperCase() + replacement.slice(1).toLowerCase();
+    const [firstReplacement, ...rest] = [...replacement];
+    return (firstReplacement ?? "").toUpperCase() + rest.join("").toLowerCase();
   }
 
   // Original is lowercase, ensure replacement is lowercase

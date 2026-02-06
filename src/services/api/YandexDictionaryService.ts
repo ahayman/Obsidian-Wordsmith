@@ -132,7 +132,7 @@ export class YandexDictionaryService implements SynonymService {
     // Deduplicate by word+type
     const seen = new Set<string>();
     const dedupedResults = results.filter((r) => {
-      const key = `${r.type}:${r.word.toLowerCase()}`;
+      const key = `${r.type}:${r.word.normalize("NFC").toLocaleLowerCase(language)}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;

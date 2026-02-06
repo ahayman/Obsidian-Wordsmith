@@ -51,8 +51,12 @@ export class QuickReplaceSuggest {
       editor,
     };
 
-    // Fetch suggestions for the specified type
-    const allSuggestions = await this.dataService.getQuickReplaceSuggestions(extraction.word, type);
+    // Detect language from surrounding context
+    const contextText = this.getContextAroundCursor(editor);
+    const resolved = this.dataService.resolveLanguage(contextText);
+
+    // Fetch suggestions for the specified type with detected language
+    const allSuggestions = await this.dataService.getQuickReplaceSuggestions(extraction.word, type, resolved.code);
     if (allSuggestions.length === 0) {
       new Notice(`No ${type === "antonym" ? "antonyms" : "suggestions"} found`);
       this.context = null;
@@ -401,5 +405,19 @@ export class QuickReplaceSuggest {
     this.definitionGroups = [];
     this.ungroupedResults = [];
     this.currentDefinitionIndex = 0;
+  }
+
+  /** Get text around the cursor for language detection (±2 lines). */
+  private getContextAroundCursor(editor: Editor): string {
+    const cursor = editor.getCursor();
+    const lineCount = editor.lineCount();
+    const startLine = Math.max(0, cursor.line - 2);
+    const endLine = Math.min(lineCount - 1, cursor.line + 2);
+
+    const lines: string[] = [];
+    for (let i = startLine; i <= endLine; i++) {
+      lines.push(editor.getLine(i));
+    }
+    return lines.join(" ");
   }
 }

@@ -269,7 +269,7 @@ export class DataService {
       localResults.push(...omwResults);
     }
 
-    const dedupedResults = this.deduplicateResults(localResults, word);
+    const dedupedResults = this.deduplicateResults(localResults, word, language);
     return this.settings.maxResults > 0
       ? dedupedResults.slice(0, this.settings.maxResults)
       : dedupedResults;
@@ -279,7 +279,7 @@ export class DataService {
     try {
       const apiResults = await this.datamuse.lookup(word, types, language);
       const datamuseResults = [...apiResults.synonyms, ...apiResults.relatedWords];
-      const dedupedResults = this.deduplicateResults(datamuseResults, word);
+      const dedupedResults = this.deduplicateResults(datamuseResults, word, language);
       return this.settings.maxResults > 0
         ? dedupedResults.slice(0, this.settings.maxResults)
         : dedupedResults;
@@ -297,19 +297,19 @@ export class DataService {
   ): Promise<SynonymResult[]> {
     try {
       const results = await service.lookup(word, this.settings.maxResults, types, language);
-      return this.deduplicateResults(results, word);
+      return this.deduplicateResults(results, word, language);
     } catch (error) {
       console.error(`API service ${service.name} lookup failed:`, error);
       return [];
     }
   }
 
-  private deduplicateResults(results: SynonymResult[], originalWord: string): SynonymResult[] {
+  private deduplicateResults(results: SynonymResult[], originalWord: string, language: LanguageCode = "en"): SynonymResult[] {
     const seen = new Set<string>();
-    const normalizedOriginal = originalWord.toLowerCase();
+    const normalizedOriginal = originalWord.normalize("NFC").toLocaleLowerCase(language);
 
     return results.filter((r) => {
-      const normalized = r.word.toLowerCase();
+      const normalized = r.word.normalize("NFC").toLocaleLowerCase(language);
       if (normalized === normalizedOriginal || seen.has(normalized)) {
         return false;
       }
@@ -339,45 +339,47 @@ export class DataService {
       return suggestions.slice(0, 5);
     }
 
-    // Get results of requested type from first enabled source that supports it
+    // Get results of requested type from first enabled source that supports it and the language
     // Return all results so QuickReplaceSuggest can group by definition and slice per group
     const enabledSources = this.getEnabledSources();
     const requestedTypes: RelationshipType[] = [type];
 
     for (const source of enabledSources) {
       if (isBuiltinSource(source)) {
+        if (!serviceSupportsLanguageWithSettings(source.id, language, this.settings)) continue;
         const supportedTypes = BUILTIN_SERVICE_TYPES[source.id];
         if (!supportedTypes.includes(type)) continue;
 
         if (source.id === "local") {
-          const cached = this.cacheService.getServiceForTypes(word, "local", requestedTypes);
+          const cached = this.cacheService.getServiceForTypes(word, "local", requestedTypes, language);
           if (cached) {
             return cached;
           }
-          const results = this.lookupLocal(word);
-          this.cacheService.setService(word, "local", results, ["synonym", "related"]);
+          const results = this.lookupLocal(word, language);
+          this.cacheService.setService(word, "local", results, ["synonym", "related"], language);
           return results.filter(r => r.type === type);
         } else if (source.id === "datamuse") {
-          const cached = this.cacheService.getServiceForTypes(word, "datamuse", requestedTypes);
+          const cached = this.cacheService.getServiceForTypes(word, "datamuse", requestedTypes, language);
           if (cached) {
             return cached;
           }
-          const results = await this.lookupDatamuse(word, requestedTypes);
-          this.cacheService.setService(word, "datamuse", results, requestedTypes);
+          const results = await this.lookupDatamuse(word, requestedTypes, language);
+          this.cacheService.setService(word, "datamuse", results, requestedTypes, language);
           return results.filter(r => r.type === type);
         }
       } else if (isAPISource(source)) {
+        if (!serviceSupportsLanguage(source.config.type, language)) continue;
         const serviceInfo = getAPIServiceInfo(source.config.type);
         if (!serviceInfo.supportedTypes.includes(type)) continue;
 
-        const cached = this.cacheService.getServiceForTypes(word, source.id, requestedTypes);
+        const cached = this.cacheService.getServiceForTypes(word, source.id, requestedTypes, language);
         if (cached) {
           return cached;
         }
         const service = this.apiServices.get(source.id);
         if (service) {
-          const results = await this.lookupAPIService(service, word, requestedTypes);
-          this.cacheService.setService(word, source.id, results, requestedTypes);
+          const results = await this.lookupAPIService(service, word, requestedTypes, language);
+          this.cacheService.setService(word, source.id, results, requestedTypes, language);
           return results.filter(r => r.type === type);
         }
       }

@@ -113,12 +113,13 @@ describe("WiktionaryService", () => {
   });
 
   describe("supportedTypes", () => {
-    it("should return synonym and antonym", () => {
+    it("should return synonym, antonym, and related", () => {
       const service = createService();
       const types = service.supportedTypes();
       expect(types).toContain("synonym");
       expect(types).toContain("antonym");
-      expect(types).toHaveLength(2);
+      expect(types).toContain("related");
+      expect(types).toHaveLength(3);
     });
   });
 
@@ -412,6 +413,171 @@ describe("WiktionaryService", () => {
 
       expect(result.valid).toBe(false);
       expect(result.error).toBe("Network timeout");
+    });
+  });
+
+  describe("form-of following", () => {
+    it("should follow generic form-of template to lemma when no results found", async () => {
+      const service = createService();
+      // First call: inflected form with form-of template, no synonyms
+      const inflectedWikitext = `==French==
+
+===Adjective===
+{{head|fr|adjective form}}
+
+# {{feminine singular of|fr|joyeux}}
+`;
+      // Second call: lemma form with actual synonyms
+      const lemmaWikitext = `==French==
+
+===Adjective===
+# Happy, joyful.
+
+====Synonyms====
+{{syn|fr|content|gai|heureux}}
+`;
+      mockRequestUrl
+        .mockResolvedValueOnce(createWikiResponse(inflectedWikitext))
+        .mockResolvedValueOnce(createWikiResponse(lemmaWikitext));
+
+      const results = await service.lookup("joyeuse", 50, ["synonym"], "fr");
+
+      expect(mockRequestUrl).toHaveBeenCalledTimes(2);
+      // Second call should be for the lemma "joyeux"
+      expect(mockRequestUrl.mock.calls[1][0].url).toContain("joyeux");
+      const synonyms = results.filter(r => r.type === "synonym");
+      expect(synonyms.map(r => r.word)).toContain("content");
+      expect(synonyms.map(r => r.word)).toContain("gai");
+      expect(synonyms.map(r => r.word)).toContain("heureux");
+    });
+
+    it("should follow plural of template", async () => {
+      const service = createService();
+      const inflectedWikitext = `==French==
+
+===Noun===
+{{head|fr|noun form}}
+
+# {{plural of|fr|maison}}
+`;
+      const lemmaWikitext = `==French==
+
+===Noun===
+# House, home.
+
+====Synonyms====
+{{syn|fr|demeure|domicile}}
+`;
+      mockRequestUrl
+        .mockResolvedValueOnce(createWikiResponse(inflectedWikitext))
+        .mockResolvedValueOnce(createWikiResponse(lemmaWikitext));
+
+      const results = await service.lookup("maisons", 50, ["synonym"], "fr");
+
+      expect(mockRequestUrl).toHaveBeenCalledTimes(2);
+      expect(results.map(r => r.word)).toContain("demeure");
+      expect(results.map(r => r.word)).toContain("domicile");
+    });
+
+    it("should follow language-specific form-of templates", async () => {
+      const service = createService();
+      const inflectedWikitext = `==French==
+
+===Verb===
+{{head|fr|verb form}}
+
+# {{fr-verb form of|parler}}
+`;
+      const lemmaWikitext = `==French==
+
+===Verb===
+# To speak.
+
+====Synonyms====
+{{syn|fr|discuter|causer}}
+`;
+      mockRequestUrl
+        .mockResolvedValueOnce(createWikiResponse(inflectedWikitext))
+        .mockResolvedValueOnce(createWikiResponse(lemmaWikitext));
+
+      const results = await service.lookup("parlé", 50, ["synonym"], "fr");
+
+      expect(mockRequestUrl).toHaveBeenCalledTimes(2);
+      expect(results.map(r => r.word)).toContain("discuter");
+    });
+
+    it("should not follow form-of when results are already found", async () => {
+      const service = createService();
+      // Page has both a form-of AND synonyms — should NOT follow
+      const wikitext = `==French==
+
+===Adjective===
+# {{feminine singular of|fr|joyeux}}
+
+====Synonyms====
+{{syn|fr|contente|gaie}}
+`;
+      mockRequestUrl.mockResolvedValueOnce(createWikiResponse(wikitext));
+
+      const results = await service.lookup("joyeuse", 50, ["synonym"], "fr");
+
+      expect(mockRequestUrl).toHaveBeenCalledTimes(1);
+      expect(results.map(r => r.word)).toContain("contente");
+    });
+
+    it("should not follow form-of beyond depth 1", async () => {
+      const service = createService();
+      // First form-of redirects to another form-of
+      const firstRedirect = `==French==
+
+===Adjective===
+# {{feminine singular of|fr|intermédiaire}}
+`;
+      const secondRedirect = `==French==
+
+===Adjective===
+# {{alternative form of|fr|intermediaire}}
+`;
+      mockRequestUrl
+        .mockResolvedValueOnce(createWikiResponse(firstRedirect))
+        .mockResolvedValueOnce(createWikiResponse(secondRedirect));
+
+      const results = await service.lookup("intermédiaires", 50, ["synonym"], "fr");
+
+      // Should stop after depth 1 (2 API calls total), not chase further
+      expect(mockRequestUrl).toHaveBeenCalledTimes(2);
+      expect(results).toEqual([]);
+    });
+
+    it("should not follow form-of when lemma matches the original word", async () => {
+      const service = createService();
+      const wikitext = `==French==
+
+===Noun===
+# {{plural of|fr|test}}
+`;
+      mockRequestUrl.mockResolvedValueOnce(createWikiResponse(wikitext));
+
+      // Word is "test" and lemma is "test" — no redirect
+      const results = await service.lookup("test", 50, ["synonym"], "fr");
+
+      expect(mockRequestUrl).toHaveBeenCalledTimes(1);
+      expect(results).toEqual([]);
+    });
+
+    it("should not follow form-of when no form-of template is found", async () => {
+      const service = createService();
+      const wikitext = `==French==
+
+===Noun===
+# Just a definition with no form-of template.
+`;
+      mockRequestUrl.mockResolvedValueOnce(createWikiResponse(wikitext));
+
+      const results = await service.lookup("chose", 50, ["synonym"], "fr");
+
+      expect(mockRequestUrl).toHaveBeenCalledTimes(1);
+      expect(results).toEqual([]);
     });
   });
 

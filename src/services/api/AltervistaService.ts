@@ -91,12 +91,13 @@ export class AltervistaService implements SynonymService {
               }
             }
           } else {
-            // Skip other annotations (similar term, etc.) but keep plain words
-            if (entry.includes("(") || entry.includes(")")) continue;
+            // Strip parenthesized annotations (similar term, etc.) but keep the word
+            const cleanEntry = entry.replace(/\s*\([^)]*\)\s*/g, "").trim();
+            if (!cleanEntry) continue;
 
             if (requestedTypes.includes("synonym")) {
               results.push({
-                word: entry,
+                word: cleanEntry,
                 type: "synonym",
                 source: "altervista",
                 partOfSpeech,
@@ -110,7 +111,7 @@ export class AltervistaService implements SynonymService {
     // Deduplicate by word+type
     const seen = new Set<string>();
     const dedupedResults = results.filter((r) => {
-      const key = `${r.type}:${r.word.toLowerCase()}`;
+      const key = `${r.type}:${r.word.normalize("NFC").toLocaleLowerCase(language)}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;

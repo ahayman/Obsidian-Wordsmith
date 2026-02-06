@@ -56,8 +56,9 @@ const LANGUAGE_SECTION_MAP: Record<string, string> = {
 // Known POS section names in Wiktionary
 const POS_SECTIONS = [
   "Noun", "Verb", "Adjective", "Adverb", "Pronoun",
-  "Preposition", "Conjunction", "Interjection", "Determiner",
+  "Preposition", "Postposition", "Conjunction", "Interjection", "Determiner",
   "Particle", "Numeral", "Proper noun",
+  "Classifier", "Counter", "Suffix", "Prefix",
 ];
 
 export class WiktionaryService implements SynonymService {
@@ -69,7 +70,7 @@ export class WiktionaryService implements SynonymService {
     this.id = id;
   }
 
-  async lookup(word: string, maxResults: number, types?: RelationshipType[], language: LanguageCode = "en"): Promise<SynonymResult[]> {
+  async lookup(word: string, maxResults: number, types?: RelationshipType[], language: LanguageCode = "en", depth = 0): Promise<SynonymResult[]> {
     const requestedTypes = types || ["synonym", "antonym"];
     const url = `${BASE_URL}?action=query&prop=revisions&titles=${encodeURIComponent(word)}&rvprop=content&rvslots=main&formatversion=2&format=json&origin=*`;
 
@@ -94,10 +95,21 @@ export class WiktionaryService implements SynonymService {
     const langSection = LANGUAGE_SECTION_MAP[language] || "English";
     const results = this.parseWikitext(wikitext, langSection, requestedTypes);
 
+    // If no results found, try following form-of templates to the lemma
+    if (results.length === 0 && depth < 1) {
+      const langContent = this.findLanguageSection(wikitext, langSection);
+      if (langContent) {
+        const lemma = this.extractLemmaFromFormOf(langContent);
+        if (lemma && lemma.toLowerCase() !== word.toLowerCase()) {
+          return this.lookup(lemma, maxResults, types, language, depth + 1);
+        }
+      }
+    }
+
     // Deduplicate by word+type
     const seen = new Set<string>();
     const dedupedResults = results.filter((r) => {
-      const key = `${r.type}:${r.word.toLowerCase()}`;
+      const key = `${r.type}:${r.word.normalize("NFC").toLocaleLowerCase(language)}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -147,6 +159,24 @@ export class WiktionaryService implements SynonymService {
               source: "wiktionary",
               partOfSpeech,
             });
+          }
+        }
+      }
+
+      // Extract related and derived terms
+      if (requestedTypes.includes("related")) {
+        for (const sectionName of ["Related terms", "Derived terms"]) {
+          const relSection = this.extractSection(posContent, sectionName, 4);
+          if (relSection) {
+            const words = this.parseWordsFromSection(relSection);
+            for (const word of words) {
+              results.push({
+                word,
+                type: "related",
+                source: "wiktionary",
+                partOfSpeech,
+              });
+            }
           }
         }
       }
@@ -202,7 +232,7 @@ export class WiktionaryService implements SynonymService {
   private parseWordsFromSection(section: string): string[] {
     const words: string[] = [];
 
-    // Parse {{syn|en|word1|word2}} and {{ant|en|word1|word2}} templates
+    // Parse {{syn|en|word1|word2}}, {{ant|en|word1|word2}}, and {{l|en|word}} templates
     const synAntRegex = /\{\{(?:syn|ant|l|link)\|[^|]*\|([^}]+)\}\}/g;
     let match: RegExpExecArray | null;
     while ((match = synAntRegex.exec(section)) !== null) {
@@ -212,6 +242,20 @@ export class WiktionaryService implements SynonymService {
       for (const arg of args) {
         const cleaned = arg.trim();
         // Skip named parameters (contain =) and qualifiers
+        if (cleaned && !cleaned.includes("=") && !cleaned.startsWith("<") && !cleaned.startsWith("(")) {
+          words.push(cleaned);
+        }
+      }
+    }
+
+    // Parse {{col2|en|word1|word2...}} through {{col5|...}} column-layout templates
+    const colRegex = /\{\{col[2-5]\|[^|]*\|([^}]+)\}\}/g;
+    while ((match = colRegex.exec(section)) !== null) {
+      const captured = match[1];
+      if (!captured) continue;
+      const args = captured.split("|");
+      for (const arg of args) {
+        const cleaned = arg.trim();
         if (cleaned && !cleaned.includes("=") && !cleaned.startsWith("<") && !cleaned.startsWith("(")) {
           words.push(cleaned);
         }
@@ -232,6 +276,26 @@ export class WiktionaryService implements SynonymService {
     }
 
     return words;
+  }
+
+  /** Extracts the lemma word from form-of templates (e.g., {{feminine singular of|fr|joyeux}}) */
+  private extractLemmaFromFormOf(langContent: string): string | null {
+    // Generic form-of templates: {{TYPE of|LANG|LEMMA}}
+    const genericFormOfRegex = /\{\{(?:feminine singular|feminine plural|masculine plural|masculine singular|plural|singular|inflection|adj form|verb form|noun form|past participle|present participle|form|alternative form|abbreviation|misspelling|archaic form|obsolete form|rare form|dated form) of\|[^|]*\|([^|}]+)/;
+    const genericMatch = genericFormOfRegex.exec(langContent);
+    if (genericMatch?.[1]) {
+      return genericMatch[1].trim();
+    }
+
+    // Language-specific templates: {{es-verb form of|LEMMA|...}}, {{de-adj form of|LEMMA|...}}, etc.
+    // These put the lemma as the first argument after the template name
+    const langSpecificRegex = /\{\{(?:es-verb form of|es-adj form of|de-adj form of|de-verb form of|it-adj form of|pt-verb form of|fr-verb form of|fi-form of)\|([^|}]+)/;
+    const langMatch = langSpecificRegex.exec(langContent);
+    if (langMatch?.[1]) {
+      return langMatch[1].trim();
+    }
+
+    return null;
   }
 
   private escapeRegex(str: string): string {
