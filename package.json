@@ -1,6 +1,6 @@
 {
   "name": "obsidian-wordsmith",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Obsidian plugin for finding synonyms and definitions of words",
   "main": "main.js",
   "dependencies": {
@@ -16,7 +16,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "keywords": [
     "obsidian",

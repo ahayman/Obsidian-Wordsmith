@@ -1,7 +1,7 @@
 {
   "id": "wordsmith",
   "name": "Wordsmith",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "minAppVersion": "1.0.0",
   "description": "Find synonyms and antonyms of words directly within Obsidian",
   "author": "Aaron Hayman",
