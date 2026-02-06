@@ -1,4 +1,5 @@
 import { SynonymResult, WordsmithSettings } from "../types/types";
+import { LanguageCode } from "../types/language";
 import { NSpellService } from "./NSpellService";
 import { DatamuseService } from "./DatamuseService";
 
@@ -21,28 +22,34 @@ export class SpellingService {
     this.settings = settings;
   }
 
-  async getSuggestions(word: string): Promise<SynonymResult[]> {
+  /**
+   * Get spelling suggestions for a word in a specific language.
+   * @param word The word to check
+   * @param language The language code (defaults to English)
+   */
+  async getSuggestions(word: string, language: LanguageCode = "en"): Promise<SynonymResult[]> {
     // Only show spelling suggestions if we can determine the word is misspelled
-    // This requires nspell to be loaded
-    if (!this.nspell.isLoaded()) {
+    // This requires nspell to be loaded for the language
+    if (!this.nspell.canSpellCheck(language)) {
       return [];
     }
 
     // If the word is correctly spelled, no suggestions needed
-    if (this.nspell.isCorrect(word)) {
+    if (this.nspell.isCorrectByWordsmithLang(word, language)) {
       return [];
     }
 
     const results: SynonymResult[] = [];
 
-    // Get nspell suggestions
-    const nspellResults = this.nspell.suggest(word);
+    // Get nspell suggestions for the specific language
+    const nspellResults = this.nspell.suggestByWordsmithLang(word, language);
     results.push(...nspellResults);
 
     // Get Datamuse suggestions unless offline-only mode
-    if (!this.settings.offlineSpellingOnly) {
+    // Note: Datamuse only supports English and Spanish for spelling
+    if (!this.settings.offlineSpellingOnly && (language === "en" || language === "es")) {
       try {
-        const datamuseResults = await this.datamuse.getSpellingSuggestions(word);
+        const datamuseResults = await this.datamuse.getSpellingSuggestions(word, language);
         results.push(...datamuseResults);
       } catch (error) {
         console.error("Datamuse spelling lookup failed:", error);

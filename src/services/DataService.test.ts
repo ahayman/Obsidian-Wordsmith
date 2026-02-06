@@ -101,6 +101,9 @@ describe("DataService", () => {
       isCorrect: jest.fn().mockReturnValue(true),
       suggest: jest.fn().mockReturnValue([]),
       load: jest.fn().mockResolvedValue(undefined),
+      canSpellCheck: jest.fn().mockReturnValue(true),
+      isCorrectByWordsmithLang: jest.fn().mockReturnValue(true),
+      suggestByWordsmithLang: jest.fn().mockReturnValue([]),
     } as unknown as jest.Mocked<NSpellService>;
     MockedNSpellService.mockImplementation(() => mockNSpell);
 
@@ -540,8 +543,8 @@ describe("DataService", () => {
       settings.sources = [];
       const service = new DataService(mockApp, "/test/plugin", settings);
 
-      // Mock nspell as not loaded so spelling doesn't add pending count
-      mockNSpell.isLoaded.mockReturnValue(false);
+      // Mock nspell as unable to spell check so spelling doesn't add pending count
+      mockNSpell.canSpellCheck.mockReturnValue(false);
 
       const callbacks: StreamingLookupCallbacks = {
         onSourceComplete: jest.fn(),
@@ -586,7 +589,7 @@ describe("DataService", () => {
 
   describe("getQuickReplaceSuggestions", () => {
     it("should return spelling corrections for misspelled words", async () => {
-      mockNSpell.isCorrect.mockReturnValue(false);
+      mockNSpell.isCorrectByWordsmithLang.mockReturnValue(false);
       mockSpellingService.getSuggestions.mockResolvedValue(
         createMockSynonymResults("spelling", "spelling")
       );
@@ -601,7 +604,7 @@ describe("DataService", () => {
     });
 
     it("should limit spelling suggestions to 5", async () => {
-      mockNSpell.isCorrect.mockReturnValue(false);
+      mockNSpell.isCorrectByWordsmithLang.mockReturnValue(false);
       const manySuggestions = Array.from({ length: 10 }, (_, i) => ({
         word: `suggestion${i}`,
         type: "spelling" as const,
@@ -619,7 +622,7 @@ describe("DataService", () => {
     });
 
     it("should return synonyms for correctly spelled words", async () => {
-      mockNSpell.isCorrect.mockReturnValue(true);
+      mockNSpell.isCorrectByWordsmithLang.mockReturnValue(true);
       mockCacheService.getService.mockReturnValue(null);
       mockCacheService.getServiceForTypes.mockReturnValue(null);
 
@@ -634,7 +637,7 @@ describe("DataService", () => {
 
     it("should use cached spelling suggestions", async () => {
       const cachedSpelling = createMockSynonymResults("cached-spelling", "spelling");
-      mockNSpell.isCorrect.mockReturnValue(false);
+      mockNSpell.isCorrectByWordsmithLang.mockReturnValue(false);
       mockCacheService.getService.mockImplementation((word: string, serviceId: string) => {
         if (serviceId === "spelling") return cachedSpelling;
         return null;
@@ -650,7 +653,7 @@ describe("DataService", () => {
     });
 
     it("should return antonyms when requested", async () => {
-      mockNSpell.isCorrect.mockReturnValue(true);
+      mockNSpell.isCorrectByWordsmithLang.mockReturnValue(true);
       mockDatamuse.lookup.mockResolvedValue({
         synonyms: [],
         relatedWords: [{ word: "antonym1", type: "antonym", source: "datamuse" }],
@@ -668,7 +671,7 @@ describe("DataService", () => {
     });
 
     it("should return empty array when no enabled sources", async () => {
-      mockNSpell.isCorrect.mockReturnValue(true);
+      mockNSpell.isCorrectByWordsmithLang.mockReturnValue(true);
 
       const settings = createDefaultSettings();
       settings.sources = [];
@@ -680,7 +683,7 @@ describe("DataService", () => {
     });
 
     it("should skip sources that do not support requested type", async () => {
-      mockNSpell.isCorrect.mockReturnValue(true);
+      mockNSpell.isCorrectByWordsmithLang.mockReturnValue(true);
       mockCacheService.getServiceForTypes.mockReturnValue(null);
 
       // Local only supports synonym and related, not hypernym
@@ -707,7 +710,7 @@ describe("DataService", () => {
     });
 
     it("should include spelling tab for misspelled words", () => {
-      mockNSpell.isCorrect.mockReturnValue(false);
+      mockNSpell.isCorrectByWordsmithLang.mockReturnValue(false);
 
       const settings = createDefaultSettings();
       const service = new DataService(mockApp, "/test/plugin", settings);
@@ -718,7 +721,7 @@ describe("DataService", () => {
     });
 
     it("should not include spelling tab for correctly spelled words", () => {
-      mockNSpell.isCorrect.mockReturnValue(true);
+      mockNSpell.isCorrectByWordsmithLang.mockReturnValue(true);
 
       const settings = createDefaultSettings();
       const service = new DataService(mockApp, "/test/plugin", settings);
@@ -728,8 +731,8 @@ describe("DataService", () => {
       expect(tabs.find((t) => t.id === "spelling")).toBeUndefined();
     });
 
-    it("should not include spelling tab if nspell not loaded", () => {
-      mockNSpell.isLoaded.mockReturnValue(false);
+    it("should not include spelling tab if nspell cannot spell check the language", () => {
+      mockNSpell.canSpellCheck.mockReturnValue(false);
 
       const settings = createDefaultSettings();
       const service = new DataService(mockApp, "/test/plugin", settings);

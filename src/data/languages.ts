@@ -1,6 +1,7 @@
 import { LanguageCode, LanguageInfo } from "../types/language";
 import { APIServiceType, BuiltinTabId, WordsmithSettings } from "../types/types";
 import { OMWLanguageCode, OMW_TO_WORDSMITH } from "../types/omwLanguage";
+import { HunspellLanguageCode, HUNSPELL_TO_WORDSMITH } from "../types/hunspellLanguage";
 
 // All supported languages with their metadata
 export const SUPPORTED_LANGUAGES: LanguageInfo[] = [
@@ -114,6 +115,26 @@ export function serviceSupportsLanguageWithSettings(
     return localLanguages.includes(language);
   }
   return serviceSupportsLanguage(serviceId, language);
+}
+
+/**
+ * Get languages supported by Hunspell spell checking, based on downloaded dictionaries.
+ */
+export function getHunspellLanguages(settings?: WordsmithSettings): LanguageCode[] {
+  const languages = new Set<LanguageCode>();
+
+  if (settings?.hunspellDownloaded) {
+    for (const [hunspellLang, isDownloaded] of Object.entries(settings.hunspellDownloaded)) {
+      if (isDownloaded) {
+        const wordsmithLang = HUNSPELL_TO_WORDSMITH[hunspellLang as HunspellLanguageCode];
+        if (wordsmithLang) {
+          languages.add(wordsmithLang);
+        }
+      }
+    }
+  }
+
+  return Array.from(languages);
 }
 
 /**

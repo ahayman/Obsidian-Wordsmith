@@ -1,6 +1,7 @@
 import { Editor, EditorPosition } from "obsidian";
 import { LanguageCode, LanguageSetting } from "./language";
 import { OMWLanguageCode } from "./omwLanguage";
+import { HunspellLanguageCode } from "./hunspellLanguage";
 
 // Relationship types for word lookups
 export type RelationshipType = "synonym" | "antonym" | "related" | "hypernym" | "hyponym";
@@ -104,7 +105,7 @@ export interface WordsmithSettings {
   sources: SourceConfig[];
   wordNetDownloaded: boolean;
   mobyDownloaded: boolean;
-  nspellDownloaded: boolean;
+  nspellDownloaded: boolean;           // Deprecated: migrated to hunspellDownloaded
   offlineSpellingOnly: boolean;
   maxCacheSize: number;
   lookupCache: LookupCache;
@@ -114,6 +115,8 @@ export interface WordsmithSettings {
   frontmatterProperty: string;         // default: "lang" (frontmatter property name)
   // OMW settings
   omwDownloaded: Partial<Record<OMWLanguageCode, boolean>>;  // Track which OMW languages are downloaded
+  // Hunspell settings
+  hunspellDownloaded: Partial<Record<HunspellLanguageCode, boolean>>;  // Track which Hunspell dictionaries are downloaded
 }
 
 export const DEFAULT_SETTINGS: WordsmithSettings = {
@@ -137,6 +140,8 @@ export const DEFAULT_SETTINGS: WordsmithSettings = {
   frontmatterProperty: "lang",
   // OMW defaults
   omwDownloaded: {},
+  // Hunspell defaults
+  hunspellDownloaded: {},
 };
 
 // Helper functions for working with SourceConfig

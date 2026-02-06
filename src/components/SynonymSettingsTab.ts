@@ -17,6 +17,13 @@ import {
   getOMWLanguageInfo,
   isOMWExtendedLanguage,
 } from "../types/omwLanguage";
+import {
+  HunspellLanguageCode,
+  HunspellRegion,
+  HUNSPELL_LANGUAGES,
+  getHunspellLanguageInfo,
+  getHunspellLanguagesByRegion,
+} from "../types/hunspellLanguage";
 import { SUPPORTED_LANGUAGES, countServicesForLanguage, getLanguageName } from "../data/languages";
 import { AddAPIServiceModal } from "./AddAPIServiceModal";
 import { getAPIServiceInfo, BUILTIN_SERVICE_TYPES } from "../services/SynonymService";
@@ -573,53 +580,195 @@ export class SynonymSettingsTab extends PluginSettingTab {
   }
 
   private addNSpellSetting(containerEl: HTMLElement): void {
-    const isDownloaded = this.plugin.settings.nspellDownloaded;
-    const statusText = isDownloaded ? " (downloaded)" : " (not downloaded)";
+    containerEl.createEl("p", {
+      cls: "setting-item-description wordsmith-local-desc",
+      text: "Download Hunspell dictionaries for offline spelling suggestions. Multiple languages can be downloaded.",
+    });
 
-    const nspellSetting = new Setting(containerEl)
-      .setName("Offline dictionary")
-      .setDesc("Download Hunspell dictionary for offline spelling suggestions (~2MB)" + statusText);
+    // Downloaded dictionaries section
+    const downloadedSection = containerEl.createDiv({ cls: "wordsmith-local-downloaded" });
+    downloadedSection.createEl("div", {
+      cls: "setting-item-name wordsmith-local-section-title",
+      text: "Downloaded dictionaries",
+    });
 
-    nspellSetting.addButton((button) => {
-      button.setButtonText(isDownloaded ? "Delete" : "Download");
-      if (!isDownloaded) {
-        button.setCta();
-      }
-      button.onClick(async () => {
-        if (isDownloaded) {
-          await this.plugin.dataService.nspell.delete();
-          this.plugin.settings.nspellDownloaded = false;
-          this.plugin.settings.offlineSpellingOnly = false;
-          await this.plugin.saveSettings();
-          this.display();
-        } else {
-          button.setButtonText("Downloading...");
-          button.setDisabled(true);
+    const downloadedList = downloadedSection.createDiv({ cls: "wordsmith-local-downloaded-list" });
+    this.renderDownloadedHunspellItems(downloadedList);
 
-          const success = await this.plugin.dataService.nspell.download((progress) => {
-            button.setButtonText(`${progress.percent}%`);
-          });
+    // Add dictionary selector
+    const addSection = containerEl.createDiv({ cls: "wordsmith-local-add" });
+    addSection.createEl("div", {
+      cls: "setting-item-name wordsmith-local-section-title",
+      text: "Add dictionary",
+    });
 
-          if (success) {
-            this.plugin.settings.nspellDownloaded = true;
-            await this.plugin.saveSettings();
-          }
+    const addRow = addSection.createDiv({ cls: "wordsmith-local-add-row" });
+    this.renderHunspellDropdown(addRow);
+  }
 
-          this.display();
-        }
+  private renderDownloadedHunspellItems(containerEl: HTMLElement): void {
+    containerEl.empty();
+    const downloadedLangs = this.getDownloadedHunspellLanguages();
+
+    if (downloadedLangs.length === 0) {
+      containerEl.createEl("div", {
+        cls: "wordsmith-local-empty",
+        text: "No dictionaries downloaded yet. Select from the list below to download.",
       });
+      return;
+    }
+
+    for (const lang of downloadedLangs) {
+      const langInfo = getHunspellLanguageInfo(lang);
+      if (!langInfo) continue;
+      this.renderDownloadedHunspellItem(containerEl, lang, langInfo.name, langInfo.nativeName);
+    }
+  }
+
+  private renderDownloadedHunspellItem(
+    containerEl: HTMLElement,
+    code: HunspellLanguageCode,
+    name: string,
+    nativeName: string
+  ): void {
+    const item = containerEl.createDiv({ cls: "wordsmith-local-item", attr: { "data-type": "hunspell" } });
+    const label = item.createSpan({ cls: "wordsmith-local-item-label" });
+    label.setText(`${name} (${nativeName})`);
+
+    const deleteBtn = item.createEl("button", {
+      cls: "wordsmith-local-delete-btn",
+      text: "Delete",
+      attr: { "data-type": "hunspell" },
+    });
+    deleteBtn.addEventListener("click", () => {
+      void this.deleteHunspellDictionary(code);
     });
   }
 
+  private getDownloadedHunspellLanguages(): HunspellLanguageCode[] {
+    const downloaded: HunspellLanguageCode[] = [];
+    for (const [lang, isDownloaded] of Object.entries(this.plugin.settings.hunspellDownloaded)) {
+      if (isDownloaded) {
+        downloaded.push(lang as HunspellLanguageCode);
+      }
+    }
+    // Sort by language name
+    return downloaded.sort((a, b) => {
+      const infoA = getHunspellLanguageInfo(a);
+      const infoB = getHunspellLanguageInfo(b);
+      return (infoA?.name || a).localeCompare(infoB?.name || b);
+    });
+  }
+
+  private renderHunspellDropdown(containerEl: HTMLElement): void {
+    const selectEl = containerEl.createEl("select", { cls: "wordsmith-local-select", attr: { "data-type": "hunspell" } });
+    selectEl.createEl("option", { value: "", text: "Select dictionary to download..." });
+
+    // Group languages by region
+    const regions: { region: HunspellRegion; label: string }[] = [
+      { region: "european", label: "European languages" },
+      { region: "americas", label: "Americas (Spanish/Portuguese variants)" },
+      { region: "asian", label: "Asian languages" },
+      { region: "other", label: "Other languages" },
+    ];
+
+    for (const { region, label } of regions) {
+      const languages = getHunspellLanguagesByRegion(region);
+      if (languages.length === 0) continue;
+
+      const group = selectEl.createEl("optgroup", { attr: { label } });
+
+      for (const lang of languages) {
+        const isDownloaded = this.plugin.settings.hunspellDownloaded[lang.code];
+        const sizeText = `~${lang.estimatedSizeMB} MB`;
+        const option = group.createEl("option", {
+          value: lang.code,
+          text: isDownloaded
+            ? `\u2713 ${lang.name} (${lang.nativeName}) - downloaded`
+            : `${lang.name} (${lang.nativeName}) (${sizeText})`,
+        });
+        if (isDownloaded) {
+          option.disabled = true;
+          option.addClass("wordsmith-option-downloaded");
+        }
+      }
+    }
+
+    // Create download button
+    const downloadBtn = containerEl.createEl("button", {
+      cls: "wordsmith-local-download-btn",
+      text: "Download",
+      attr: { "data-type": "hunspell" },
+    });
+    downloadBtn.disabled = true;
+
+    selectEl.addEventListener("change", () => {
+      downloadBtn.disabled = !selectEl.value;
+    });
+
+    downloadBtn.addEventListener("click", () => {
+      const selected = selectEl.value as HunspellLanguageCode;
+      if (!selected) return;
+
+      void this.downloadHunspellDictionary(selected, downloadBtn, selectEl);
+    });
+  }
+
+  private async downloadHunspellDictionary(
+    lang: HunspellLanguageCode,
+    button: HTMLButtonElement,
+    select: HTMLSelectElement
+  ): Promise<void> {
+    const originalText = button.textContent;
+    button.disabled = true;
+    select.disabled = true;
+    button.textContent = "Downloading...";
+
+    try {
+      const success = await this.plugin.dataService.nspell.download(lang, (progress) => {
+        button.textContent = `${progress.percent}%`;
+      });
+
+      if (success) {
+        this.plugin.settings.hunspellDownloaded[lang] = true;
+        await this.plugin.saveSettings();
+        this.display();
+      } else {
+        button.textContent = "Failed";
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.disabled = false;
+          select.disabled = false;
+        }, 2000);
+      }
+    } catch (error) {
+      console.error(`Failed to download Hunspell dictionary for ${lang}:`, error);
+      button.textContent = "Error";
+      setTimeout(() => {
+        button.textContent = originalText;
+        button.disabled = false;
+        select.disabled = false;
+      }, 2000);
+    }
+  }
+
+  private async deleteHunspellDictionary(lang: HunspellLanguageCode): Promise<void> {
+    await this.plugin.dataService.nspell.delete(lang);
+    delete this.plugin.settings.hunspellDownloaded[lang];
+    await this.plugin.saveSettings();
+    this.display();
+  }
+
   private addOfflineSpellingSetting(containerEl: HTMLElement): void {
-    // Only show if nspell is downloaded
-    if (!this.plugin.settings.nspellDownloaded) {
+    // Only show if any Hunspell dictionary is downloaded
+    const hasDownloaded = Object.values(this.plugin.settings.hunspellDownloaded).some(v => v);
+    if (!hasDownloaded) {
       return;
     }
 
     new Setting(containerEl)
       .setName("Offline spelling only")
-      .setDesc("Only use downloaded dictionary, don't query online services for spelling suggestions")
+      .setDesc("Only use downloaded dictionaries, don't query online services for spelling suggestions")
       .addToggle((toggle) =>
         toggle
           .setValue(this.plugin.settings.offlineSpellingOnly)

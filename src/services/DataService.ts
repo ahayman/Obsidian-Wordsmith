@@ -17,6 +17,7 @@ import {
 } from "../types/types";
 import { LanguageCode, ResolvedLanguage } from "../types/language";
 import { OMWLanguageCode } from "../types/omwLanguage";
+import { HunspellLanguageCode } from "../types/hunspellLanguage";
 import { WordNetService } from "./WordNetService";
 import { MobyService } from "./MobyService";
 import { DatamuseService } from "./DatamuseService";
@@ -149,9 +150,17 @@ export class DataService {
       loadPromises.push(this.moby.load());
     }
 
-    // Load nspell if downloaded
-    if (this.settings.nspellDownloaded) {
-      loadPromises.push(this.nspell.load());
+    // Load Hunspell dictionaries that are marked as downloaded
+    for (const [lang, isDownloaded] of Object.entries(this.settings.hunspellDownloaded)) {
+      if (isDownloaded) {
+        loadPromises.push(this.nspell.load(lang as HunspellLanguageCode));
+      }
+    }
+
+    // Legacy: Load nspell if nspellDownloaded is true but hunspellDownloaded.en is not set
+    // This handles the case where migration hasn't happened yet
+    if (this.settings.nspellDownloaded && !this.settings.hunspellDownloaded?.en) {
+      loadPromises.push(this.nspell.load("en"));
     }
 
     // Load OMW languages that are marked as downloaded
@@ -315,18 +324,18 @@ export class DataService {
    * Otherwise, returns results of the requested type from the first enabled source.
    * Uses per-service caching.
    */
-  async getQuickReplaceSuggestions(word: string, type: RelationshipType = "synonym"): Promise<SynonymResult[]> {
+  async getQuickReplaceSuggestions(word: string, type: RelationshipType = "synonym", language: LanguageCode = "en"): Promise<SynonymResult[]> {
     // Check spelling first - if misspelled, return spelling corrections
     // Spelling takes priority over both synonyms and antonyms
-    if (this.nspell.isLoaded() && !this.nspell.isCorrect(word)) {
+    if (this.nspell.canSpellCheck(language) && !this.nspell.isCorrectByWordsmithLang(word, language)) {
       // Check cache for spelling
-      const cached = this.cacheService.getService(word, "spelling");
+      const cached = this.cacheService.getService(word, "spelling", language);
       if (cached) {
         // Spelling results don't have definitions to group by, limit to 5
         return cached.slice(0, 5);
       }
-      const suggestions = await this.spellingService.getSuggestions(word);
-      this.cacheService.setService(word, "spelling", suggestions, []);
+      const suggestions = await this.spellingService.getSuggestions(word, language);
+      this.cacheService.setService(word, "spelling", suggestions, [], language);
       return suggestions.slice(0, 5);
     }
 
@@ -379,14 +388,13 @@ export class DataService {
   /**
    * Returns metadata for all enabled tabs (known before any lookup).
    * Filters by language support.
-   * Includes spelling tab only if the word is misspelled and language is English (nspell is English-only).
+   * Includes spelling tab only if the word is misspelled and a Hunspell dictionary is available for the language.
    */
   getEnabledTabMetadata(word: string, language: LanguageCode = "en"): TabMetadata[] {
     const tabs: TabMetadata[] = [];
 
-    // Add spelling tab only if nspell is loaded, word is misspelled, and language is English
-    // NSpell only supports English, so skip for other languages
-    if (language === "en" && this.nspell.isLoaded() && !this.nspell.isCorrect(word)) {
+    // Add spelling tab if nspell can check the language and word is misspelled
+    if (this.nspell.canSpellCheck(language) && !this.nspell.isCorrectByWordsmithLang(word, language)) {
       tabs.push({ id: "spelling", label: "Spelling", iconId: "spelling" });
     }
 
@@ -517,14 +525,14 @@ export class DataService {
       }
     }
 
-    // Add spelling suggestions lookup only for English (nspell is English-only)
-    if (language === "en") {
+    // Add spelling suggestions lookup if nspell can check the language
+    if (this.nspell.canSpellCheck(language)) {
       pendingCount++;
       const cachedSpelling = this.cacheService.getService(word, "spelling", language);
       if (cachedSpelling) {
         onSourceDone("spelling", cachedSpelling, true, []);
       } else {
-        void this.spellingService.getSuggestions(word).then((spellingResults) => {
+        void this.spellingService.getSuggestions(word, language).then((spellingResults) => {
           onSourceDone("spelling", spellingResults, false, []);
         });
       }

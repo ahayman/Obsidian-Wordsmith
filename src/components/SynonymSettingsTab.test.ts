@@ -612,7 +612,7 @@ describe("SynonymSettingsTab", () => {
 
       settingsTab.display();
 
-      const downloadBtn = settingsTab.containerEl.querySelector(".wordsmith-local-download-btn");
+      const downloadBtn = settingsTab.containerEl.querySelector(".wordsmith-local-download-btn:not([data-type])");
       expect(downloadBtn).not.toBeNull();
       expect(downloadBtn?.textContent).toBe("Download");
     });
@@ -622,7 +622,7 @@ describe("SynonymSettingsTab", () => {
 
       settingsTab.display();
 
-      const select = settingsTab.containerEl.querySelector(".wordsmith-local-select") as HTMLSelectElement;
+      const select = settingsTab.containerEl.querySelector(".wordsmith-local-select:not([data-type])") as HTMLSelectElement;
       expect(select).not.toBeNull();
 
       // Verify dropdown contains WordNet option (by checking innerHTML)
@@ -634,7 +634,7 @@ describe("SynonymSettingsTab", () => {
 
       settingsTab.display();
 
-      const select = settingsTab.containerEl.querySelector(".wordsmith-local-select") as HTMLSelectElement;
+      const select = settingsTab.containerEl.querySelector(".wordsmith-local-select:not([data-type])") as HTMLSelectElement;
 
       // When downloaded, the option text should show checkmark and "downloaded"
       expect(select.innerHTML).toContain("✓");
@@ -656,7 +656,7 @@ describe("SynonymSettingsTab", () => {
       settingsTab.display();
 
       // Find the delete button for WordNet in the downloaded list
-      const downloadedItems = settingsTab.containerEl.querySelectorAll(".wordsmith-local-item");
+      const downloadedItems = settingsTab.containerEl.querySelectorAll(".wordsmith-local-item:not([data-type])");
       let wordnetDeleteBtn: HTMLButtonElement | null = null;
       downloadedItems.forEach(item => {
         if (item.textContent?.includes("WordNet")) {
@@ -677,7 +677,7 @@ describe("SynonymSettingsTab", () => {
 
       settingsTab.display();
 
-      const select = settingsTab.containerEl.querySelector(".wordsmith-local-select") as HTMLSelectElement;
+      const select = settingsTab.containerEl.querySelector(".wordsmith-local-select:not([data-type])") as HTMLSelectElement;
       expect(select.innerHTML).toContain("Moby");
     });
 
@@ -696,7 +696,7 @@ describe("SynonymSettingsTab", () => {
 
       settingsTab.display();
 
-      const downloadedItems = settingsTab.containerEl.querySelectorAll(".wordsmith-local-item");
+      const downloadedItems = settingsTab.containerEl.querySelectorAll(".wordsmith-local-item:not([data-type])");
       let mobyDeleteBtn: HTMLButtonElement | null = null;
       downloadedItems.forEach(item => {
         if (item.textContent?.includes("Moby")) {
@@ -716,19 +716,20 @@ describe("SynonymSettingsTab", () => {
   });
 
   describe("NSpell/Spelling settings", () => {
-    it("should show Download button for offline dictionary when not downloaded", () => {
-      mockPlugin.settings.nspellDownloaded = false;
+    it("should show description text for Hunspell dictionaries", () => {
+      mockPlugin.settings.hunspellDownloaded = {};
 
       settingsTab.display();
 
-      const descriptions = Array.from(settingsTab.containerEl.querySelectorAll(".setting-item-description"));
-      const nspellDesc = descriptions.find(d => d.textContent?.includes("Hunspell"));
+      const descriptions = Array.from(settingsTab.containerEl.querySelectorAll(".setting-item-description, .wordsmith-local-desc"));
+      const hunspellDesc = descriptions.find(d => d.textContent?.includes("Hunspell"));
 
-      expect(nspellDesc?.textContent).toContain("(not downloaded)");
+      expect(hunspellDesc).not.toBeNull();
+      expect(hunspellDesc?.textContent).toContain("Download Hunspell dictionaries");
     });
 
-    it("should show offline spelling only toggle when nspell is downloaded", () => {
-      mockPlugin.settings.nspellDownloaded = true;
+    it("should show offline spelling only toggle when hunspell dictionary is downloaded", () => {
+      mockPlugin.settings.hunspellDownloaded = { en: true };
       mockPlugin.settings.offlineSpellingOnly = false;
 
       settingsTab.display();
@@ -739,8 +740,8 @@ describe("SynonymSettingsTab", () => {
       expect(offlineOnlySetting).not.toBeNull();
     });
 
-    it("should not show offline spelling only toggle when nspell is not downloaded", () => {
-      mockPlugin.settings.nspellDownloaded = false;
+    it("should not show offline spelling only toggle when no dictionaries downloaded", () => {
+      mockPlugin.settings.hunspellDownloaded = {};
 
       settingsTab.display();
 
@@ -750,76 +751,110 @@ describe("SynonymSettingsTab", () => {
       expect(offlineOnlySetting).toBeUndefined();
     });
 
-    it("should call download when NSpell Download button is clicked", async () => {
-      mockPlugin.settings.nspellDownloaded = false;
+    it("should show download dropdown for Hunspell languages", () => {
+      mockPlugin.settings.hunspellDownloaded = {};
 
       settingsTab.display();
 
-      const settingItems = settingsTab.containerEl.querySelectorAll(".setting-item");
-      let nspellDownloadBtn: HTMLButtonElement | null = null;
-      settingItems.forEach(item => {
-        const desc = item.querySelector(".setting-item-description");
-        if (desc?.textContent?.includes("Hunspell")) {
-          nspellDownloadBtn = item.querySelector("button");
-        }
-      });
+      const select = settingsTab.containerEl.querySelector(".wordsmith-local-select[data-type='hunspell']");
+      expect(select).not.toBeNull();
 
-      expect(nspellDownloadBtn).not.toBeNull();
-      expect(nspellDownloadBtn?.textContent).toBe("Download");
-
-      nspellDownloadBtn?.click();
-
-      await new Promise(resolve => setTimeout(resolve, 50));
-
-      expect(mockPlugin.dataService.nspell.download).toHaveBeenCalled();
+      // Check that it has language options
+      const options = select?.querySelectorAll("option");
+      expect(options?.length).toBeGreaterThan(1);
     });
 
-    it("should update settings after successful NSpell download", async () => {
-      mockPlugin.settings.nspellDownloaded = false;
+    it("should call download when Hunspell Download button is clicked", async () => {
+      mockPlugin.settings.hunspellDownloaded = {};
       mockPlugin.dataService.nspell.download.mockResolvedValue(true);
 
       settingsTab.display();
 
-      const settingItems = settingsTab.containerEl.querySelectorAll(".setting-item");
-      let nspellDownloadBtn: HTMLButtonElement | null = null;
-      settingItems.forEach(item => {
-        const desc = item.querySelector(".setting-item-description");
-        if (desc?.textContent?.includes("Hunspell")) {
-          nspellDownloadBtn = item.querySelector("button");
-        }
-      });
+      // Select a language from dropdown
+      const select = settingsTab.containerEl.querySelector(".wordsmith-local-select[data-type='hunspell']") as HTMLSelectElement;
+      expect(select).not.toBeNull();
 
-      nspellDownloadBtn?.click();
+      // The options are inside optgroups, so we need to find them differently
+      // Set to any available value that's not empty
+      const allOptions = select.querySelectorAll("option");
+      expect(allOptions.length).toBeGreaterThan(1);
+
+      // Find first non-empty option value
+      const nonEmptyOption = Array.from(allOptions).find(opt => opt.value && !opt.disabled);
+      expect(nonEmptyOption).toBeDefined();
+      select.value = nonEmptyOption!.value;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+
+      // Find and click download button
+      const downloadBtn = settingsTab.containerEl.querySelector(".wordsmith-local-download-btn[data-type='hunspell']") as HTMLButtonElement;
+      expect(downloadBtn).not.toBeNull();
+      expect(downloadBtn.disabled).toBe(false);
+      downloadBtn.click();
 
       await new Promise(resolve => setTimeout(resolve, 50));
 
-      expect(mockPlugin.settings.nspellDownloaded).toBe(true);
-      expect(mockPlugin.saveSettings).toHaveBeenCalled();
+      expect(mockPlugin.dataService.nspell.download).toHaveBeenCalledWith(nonEmptyOption!.value, expect.any(Function));
     });
 
-    it("should call delete when NSpell Delete button is clicked", async () => {
-      mockPlugin.settings.nspellDownloaded = true;
+    it("should update settings after successful Hunspell download", async () => {
+      mockPlugin.settings.hunspellDownloaded = {};
+      mockPlugin.dataService.nspell.download.mockResolvedValue(true);
 
       settingsTab.display();
 
-      const settingItems = settingsTab.containerEl.querySelectorAll(".setting-item");
-      let nspellDeleteBtn: HTMLButtonElement | null = null;
-      settingItems.forEach(item => {
-        const desc = item.querySelector(".setting-item-description");
-        if (desc?.textContent?.includes("Hunspell")) {
-          nspellDeleteBtn = item.querySelector("button");
-        }
-      });
+      // Select a language from dropdown
+      const select = settingsTab.containerEl.querySelector(".wordsmith-local-select[data-type='hunspell']") as HTMLSelectElement;
+      expect(select).not.toBeNull();
 
-      expect(nspellDeleteBtn?.textContent).toBe("Delete");
+      // Find first non-empty, non-disabled option
+      const allOptions = select.querySelectorAll("option");
+      const nonEmptyOption = Array.from(allOptions).find(opt => opt.value && !opt.disabled);
+      expect(nonEmptyOption).toBeDefined();
+      const selectedLang = nonEmptyOption!.value;
+      select.value = selectedLang;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
 
-      nspellDeleteBtn?.click();
+      // Find and click download button
+      const downloadBtn = settingsTab.containerEl.querySelector(".wordsmith-local-download-btn[data-type='hunspell']") as HTMLButtonElement;
+      expect(downloadBtn).not.toBeNull();
+      expect(downloadBtn.disabled).toBe(false);
+      downloadBtn.click();
+
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      expect(mockPlugin.settings.hunspellDownloaded[selectedLang as keyof typeof mockPlugin.settings.hunspellDownloaded]).toBe(true);
+      expect(mockPlugin.saveSettings).toHaveBeenCalled();
+    });
+
+    it("should show downloaded dictionaries with delete button", async () => {
+      mockPlugin.settings.hunspellDownloaded = { en: true };
+
+      settingsTab.display();
+
+      // Look for downloaded items
+      const downloadedItems = settingsTab.containerEl.querySelectorAll(".wordsmith-local-item[data-type='hunspell']");
+      expect(downloadedItems.length).toBeGreaterThan(0);
+
+      // Find the delete button
+      const deleteBtn = downloadedItems[0]?.querySelector(".wordsmith-local-delete-btn[data-type='hunspell']");
+      expect(deleteBtn).not.toBeNull();
+      expect(deleteBtn?.textContent).toBe("Delete");
+    });
+
+    it("should call delete when Hunspell Delete button is clicked", async () => {
+      mockPlugin.settings.hunspellDownloaded = { en: true };
+
+      settingsTab.display();
+
+      // Find and click delete button
+      const deleteBtn = settingsTab.containerEl.querySelector(".wordsmith-local-delete-btn[data-type='hunspell']") as HTMLButtonElement;
+      expect(deleteBtn).not.toBeNull();
+      deleteBtn.click();
 
       await new Promise(resolve => setTimeout(resolve, 0));
 
-      expect(mockPlugin.dataService.nspell.delete).toHaveBeenCalled();
-      expect(mockPlugin.settings.nspellDownloaded).toBe(false);
-      expect(mockPlugin.settings.offlineSpellingOnly).toBe(false);
+      expect(mockPlugin.dataService.nspell.delete).toHaveBeenCalledWith("en");
+      expect(mockPlugin.settings.hunspellDownloaded.en).toBeUndefined();
       expect(mockPlugin.saveSettings).toHaveBeenCalled();
     });
   });

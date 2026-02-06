@@ -15,6 +15,9 @@ function createMockNSpellService() {
   mock.isLoaded = jest.fn();
   mock.isCorrect = jest.fn();
   mock.suggest = jest.fn();
+  mock.canSpellCheck = jest.fn();
+  mock.isCorrectByWordsmithLang = jest.fn();
+  mock.suggestByWordsmithLang = jest.fn();
   return mock;
 }
 
@@ -47,9 +50,9 @@ describe("SpellingService", () => {
       const newSettings = createSettings({ offlineSpellingOnly: true });
 
       // Setup: nspell loaded, word misspelled
-      (mockNSpell.isLoaded as jest.Mock).mockReturnValue(true);
-      (mockNSpell.isCorrect as jest.Mock).mockReturnValue(false);
-      (mockNSpell.suggest as jest.Mock).mockReturnValue([]);
+      (mockNSpell.canSpellCheck as jest.Mock).mockReturnValue(true);
+      (mockNSpell.isCorrectByWordsmithLang as jest.Mock).mockReturnValue(false);
+      (mockNSpell.suggestByWordsmithLang as jest.Mock).mockReturnValue([]);
       (mockDatamuse.getSpellingSuggestions as jest.Mock).mockResolvedValue([]);
 
       service.updateSettings(newSettings);
@@ -64,35 +67,35 @@ describe("SpellingService", () => {
   describe("getSuggestions", () => {
     describe("when nspell is not loaded", () => {
       it("should return empty array", async () => {
-        (mockNSpell.isLoaded as jest.Mock).mockReturnValue(false);
+        (mockNSpell.canSpellCheck as jest.Mock).mockReturnValue(false);
 
         const results = await service.getSuggestions("helo");
 
         expect(results).toEqual([]);
-        expect(mockNSpell.isCorrect).not.toHaveBeenCalled();
-        expect(mockNSpell.suggest).not.toHaveBeenCalled();
+        expect(mockNSpell.isCorrectByWordsmithLang).not.toHaveBeenCalled();
+        expect(mockNSpell.suggestByWordsmithLang).not.toHaveBeenCalled();
         expect(mockDatamuse.getSpellingSuggestions).not.toHaveBeenCalled();
       });
     });
 
     describe("when word is correctly spelled", () => {
       it("should return empty array", async () => {
-        (mockNSpell.isLoaded as jest.Mock).mockReturnValue(true);
-        (mockNSpell.isCorrect as jest.Mock).mockReturnValue(true);
+        (mockNSpell.canSpellCheck as jest.Mock).mockReturnValue(true);
+        (mockNSpell.isCorrectByWordsmithLang as jest.Mock).mockReturnValue(true);
 
         const results = await service.getSuggestions("hello");
 
         expect(results).toEqual([]);
-        expect(mockNSpell.isCorrect).toHaveBeenCalledWith("hello");
-        expect(mockNSpell.suggest).not.toHaveBeenCalled();
+        expect(mockNSpell.isCorrectByWordsmithLang).toHaveBeenCalledWith("hello", "en");
+        expect(mockNSpell.suggestByWordsmithLang).not.toHaveBeenCalled();
         expect(mockDatamuse.getSpellingSuggestions).not.toHaveBeenCalled();
       });
     });
 
     describe("when word is misspelled", () => {
       beforeEach(() => {
-        (mockNSpell.isLoaded as jest.Mock).mockReturnValue(true);
-        (mockNSpell.isCorrect as jest.Mock).mockReturnValue(false);
+        (mockNSpell.canSpellCheck as jest.Mock).mockReturnValue(true);
+        (mockNSpell.isCorrectByWordsmithLang as jest.Mock).mockReturnValue(false);
       });
 
       it("should return nspell suggestions", async () => {
@@ -100,7 +103,7 @@ describe("SpellingService", () => {
           { word: "hello", type: "spelling", source: "nspell" },
           { word: "halo", type: "spelling", source: "nspell" },
         ];
-        (mockNSpell.suggest as jest.Mock).mockReturnValue(nspellResults);
+        (mockNSpell.suggestByWordsmithLang as jest.Mock).mockReturnValue(nspellResults);
         (mockDatamuse.getSpellingSuggestions as jest.Mock).mockResolvedValue([]);
 
         const results = await service.getSuggestions("helo");
@@ -110,7 +113,7 @@ describe("SpellingService", () => {
       });
 
       it("should also fetch datamuse suggestions by default", async () => {
-        (mockNSpell.suggest as jest.Mock).mockReturnValue([]);
+        (mockNSpell.suggestByWordsmithLang as jest.Mock).mockReturnValue([]);
         const datamuseResults: SynonymResult[] = [
           { word: "hello", type: "spelling", source: "datamuse" },
           { word: "help", type: "spelling", source: "datamuse" },
@@ -119,7 +122,7 @@ describe("SpellingService", () => {
 
         const results = await service.getSuggestions("helo");
 
-        expect(mockDatamuse.getSpellingSuggestions).toHaveBeenCalledWith("helo");
+        expect(mockDatamuse.getSpellingSuggestions).toHaveBeenCalledWith("helo", "en");
         expect(results).toContainEqual({ word: "hello", type: "spelling", source: "datamuse" });
         expect(results).toContainEqual({ word: "help", type: "spelling", source: "datamuse" });
       });
@@ -131,7 +134,7 @@ describe("SpellingService", () => {
         const datamuseResults: SynonymResult[] = [
           { word: "help", type: "spelling", source: "datamuse" },
         ];
-        (mockNSpell.suggest as jest.Mock).mockReturnValue(nspellResults);
+        (mockNSpell.suggestByWordsmithLang as jest.Mock).mockReturnValue(nspellResults);
         (mockDatamuse.getSpellingSuggestions as jest.Mock).mockResolvedValue(datamuseResults);
 
         const results = await service.getSuggestions("helo");
@@ -145,7 +148,7 @@ describe("SpellingService", () => {
         const offlineSettings = createSettings({ offlineSpellingOnly: true });
         service = new SpellingService(mockNSpell, mockDatamuse, offlineSettings);
 
-        (mockNSpell.suggest as jest.Mock).mockReturnValue([
+        (mockNSpell.suggestByWordsmithLang as jest.Mock).mockReturnValue([
           { word: "hello", type: "spelling", source: "nspell" },
         ]);
 
@@ -159,7 +162,7 @@ describe("SpellingService", () => {
         const nspellResults: SynonymResult[] = [
           { word: "hello", type: "spelling", source: "nspell" },
         ];
-        (mockNSpell.suggest as jest.Mock).mockReturnValue(nspellResults);
+        (mockNSpell.suggestByWordsmithLang as jest.Mock).mockReturnValue(nspellResults);
         (mockDatamuse.getSpellingSuggestions as jest.Mock).mockRejectedValue(new Error("Network error"));
 
         const consoleSpy = jest.spyOn(console, "error").mockImplementation();
@@ -176,8 +179,8 @@ describe("SpellingService", () => {
 
     describe("deduplication", () => {
       beforeEach(() => {
-        (mockNSpell.isLoaded as jest.Mock).mockReturnValue(true);
-        (mockNSpell.isCorrect as jest.Mock).mockReturnValue(false);
+        (mockNSpell.canSpellCheck as jest.Mock).mockReturnValue(true);
+        (mockNSpell.isCorrectByWordsmithLang as jest.Mock).mockReturnValue(false);
       });
 
       it("should remove duplicate words (case insensitive)", async () => {
@@ -188,7 +191,7 @@ describe("SpellingService", () => {
           { word: "hello", type: "spelling", source: "datamuse" },
           { word: "HELLO", type: "spelling", source: "datamuse" },
         ];
-        (mockNSpell.suggest as jest.Mock).mockReturnValue(nspellResults);
+        (mockNSpell.suggestByWordsmithLang as jest.Mock).mockReturnValue(nspellResults);
         (mockDatamuse.getSpellingSuggestions as jest.Mock).mockResolvedValue(datamuseResults);
 
         const results = await service.getSuggestions("helo");
@@ -203,7 +206,7 @@ describe("SpellingService", () => {
           { word: "helo", type: "spelling", source: "nspell" }, // Same as input
           { word: "hello", type: "spelling", source: "nspell" },
         ];
-        (mockNSpell.suggest as jest.Mock).mockReturnValue(nspellResults);
+        (mockNSpell.suggestByWordsmithLang as jest.Mock).mockReturnValue(nspellResults);
         (mockDatamuse.getSpellingSuggestions as jest.Mock).mockResolvedValue([]);
 
         const results = await service.getSuggestions("helo");
@@ -218,7 +221,7 @@ describe("SpellingService", () => {
           { word: "Helo", type: "spelling", source: "nspell" },
           { word: "hello", type: "spelling", source: "nspell" },
         ];
-        (mockNSpell.suggest as jest.Mock).mockReturnValue(nspellResults);
+        (mockNSpell.suggestByWordsmithLang as jest.Mock).mockReturnValue(nspellResults);
         (mockDatamuse.getSpellingSuggestions as jest.Mock).mockResolvedValue([]);
 
         const results = await service.getSuggestions("helo");
@@ -233,7 +236,7 @@ describe("SpellingService", () => {
         const datamuseResults: SynonymResult[] = [
           { word: "hello", type: "spelling", source: "datamuse" },
         ];
-        (mockNSpell.suggest as jest.Mock).mockReturnValue(nspellResults);
+        (mockNSpell.suggestByWordsmithLang as jest.Mock).mockReturnValue(nspellResults);
         (mockDatamuse.getSpellingSuggestions as jest.Mock).mockResolvedValue(datamuseResults);
 
         const results = await service.getSuggestions("helo");
@@ -247,11 +250,11 @@ describe("SpellingService", () => {
 
     describe("edge cases", () => {
       beforeEach(() => {
-        (mockNSpell.isLoaded as jest.Mock).mockReturnValue(true);
+        (mockNSpell.canSpellCheck as jest.Mock).mockReturnValue(true);
       });
 
       it("should handle empty word", async () => {
-        (mockNSpell.isCorrect as jest.Mock).mockReturnValue(true);
+        (mockNSpell.isCorrectByWordsmithLang as jest.Mock).mockReturnValue(true);
 
         const results = await service.getSuggestions("");
 
@@ -259,7 +262,7 @@ describe("SpellingService", () => {
       });
 
       it("should handle word with only whitespace", async () => {
-        (mockNSpell.isCorrect as jest.Mock).mockReturnValue(true);
+        (mockNSpell.isCorrectByWordsmithLang as jest.Mock).mockReturnValue(true);
 
         const results = await service.getSuggestions("   ");
 
@@ -267,32 +270,32 @@ describe("SpellingService", () => {
       });
 
       it("should handle unicode characters", async () => {
-        (mockNSpell.isCorrect as jest.Mock).mockReturnValue(false);
-        (mockNSpell.suggest as jest.Mock).mockReturnValue([
+        (mockNSpell.isCorrectByWordsmithLang as jest.Mock).mockReturnValue(false);
+        (mockNSpell.suggestByWordsmithLang as jest.Mock).mockReturnValue([
           { word: "cafe", type: "spelling", source: "nspell" },
         ]);
         (mockDatamuse.getSpellingSuggestions as jest.Mock).mockResolvedValue([]);
 
         const results = await service.getSuggestions("caf\u00e9");
 
-        expect(mockNSpell.isCorrect).toHaveBeenCalledWith("caf\u00e9");
+        expect(mockNSpell.isCorrectByWordsmithLang).toHaveBeenCalledWith("caf\u00e9", "en");
         expect(results.length).toBe(1);
       });
 
       it("should handle special characters", async () => {
-        (mockNSpell.isCorrect as jest.Mock).mockReturnValue(false);
-        (mockNSpell.suggest as jest.Mock).mockReturnValue([]);
+        (mockNSpell.isCorrectByWordsmithLang as jest.Mock).mockReturnValue(false);
+        (mockNSpell.suggestByWordsmithLang as jest.Mock).mockReturnValue([]);
         (mockDatamuse.getSpellingSuggestions as jest.Mock).mockResolvedValue([]);
 
         const results = await service.getSuggestions("hello-world");
 
-        expect(mockNSpell.isCorrect).toHaveBeenCalledWith("hello-world");
+        expect(mockNSpell.isCorrectByWordsmithLang).toHaveBeenCalledWith("hello-world", "en");
         expect(results).toEqual([]);
       });
 
       it("should handle when both services return empty results", async () => {
-        (mockNSpell.isCorrect as jest.Mock).mockReturnValue(false);
-        (mockNSpell.suggest as jest.Mock).mockReturnValue([]);
+        (mockNSpell.isCorrectByWordsmithLang as jest.Mock).mockReturnValue(false);
+        (mockNSpell.suggestByWordsmithLang as jest.Mock).mockReturnValue([]);
         (mockDatamuse.getSpellingSuggestions as jest.Mock).mockResolvedValue([]);
 
         const results = await service.getSuggestions("xyzabc");
@@ -304,8 +307,8 @@ describe("SpellingService", () => {
         const nspellResults: SynonymResult[] = [
           { word: "test", type: "spelling", source: "nspell" },
         ];
-        (mockNSpell.isCorrect as jest.Mock).mockReturnValue(false);
-        (mockNSpell.suggest as jest.Mock).mockReturnValue(nspellResults);
+        (mockNSpell.isCorrectByWordsmithLang as jest.Mock).mockReturnValue(false);
+        (mockNSpell.suggestByWordsmithLang as jest.Mock).mockReturnValue(nspellResults);
         (mockDatamuse.getSpellingSuggestions as jest.Mock).mockRejectedValue(new Error("API error"));
 
         const consoleSpy = jest.spyOn(console, "error").mockImplementation();
@@ -318,8 +321,8 @@ describe("SpellingService", () => {
       });
 
       it("should handle null or undefined from nspell suggest", async () => {
-        (mockNSpell.isCorrect as jest.Mock).mockReturnValue(false);
-        (mockNSpell.suggest as jest.Mock).mockReturnValue([]);
+        (mockNSpell.isCorrectByWordsmithLang as jest.Mock).mockReturnValue(false);
+        (mockNSpell.suggestByWordsmithLang as jest.Mock).mockReturnValue([]);
         (mockDatamuse.getSpellingSuggestions as jest.Mock).mockResolvedValue([
           { word: "test", type: "spelling", source: "datamuse" },
         ]);
@@ -335,9 +338,9 @@ describe("SpellingService", () => {
         const offlineSettings = createSettings({ offlineSpellingOnly: true });
         const offlineService = new SpellingService(mockNSpell, mockDatamuse, offlineSettings);
 
-        (mockNSpell.isLoaded as jest.Mock).mockReturnValue(true);
-        (mockNSpell.isCorrect as jest.Mock).mockReturnValue(false);
-        (mockNSpell.suggest as jest.Mock).mockReturnValue([]);
+        (mockNSpell.canSpellCheck as jest.Mock).mockReturnValue(true);
+        (mockNSpell.isCorrectByWordsmithLang as jest.Mock).mockReturnValue(false);
+        (mockNSpell.suggestByWordsmithLang as jest.Mock).mockReturnValue([]);
 
         await offlineService.getSuggestions("test");
 
@@ -345,9 +348,9 @@ describe("SpellingService", () => {
       });
 
       it("should respect offlineSpellingOnly after updateSettings", async () => {
-        (mockNSpell.isLoaded as jest.Mock).mockReturnValue(true);
-        (mockNSpell.isCorrect as jest.Mock).mockReturnValue(false);
-        (mockNSpell.suggest as jest.Mock).mockReturnValue([]);
+        (mockNSpell.canSpellCheck as jest.Mock).mockReturnValue(true);
+        (mockNSpell.isCorrectByWordsmithLang as jest.Mock).mockReturnValue(false);
+        (mockNSpell.suggestByWordsmithLang as jest.Mock).mockReturnValue([]);
         (mockDatamuse.getSpellingSuggestions as jest.Mock).mockResolvedValue([]);
 
         // First call with online mode
@@ -363,9 +366,9 @@ describe("SpellingService", () => {
       });
 
       it("should switch back to online mode when setting is toggled", async () => {
-        (mockNSpell.isLoaded as jest.Mock).mockReturnValue(true);
-        (mockNSpell.isCorrect as jest.Mock).mockReturnValue(false);
-        (mockNSpell.suggest as jest.Mock).mockReturnValue([]);
+        (mockNSpell.canSpellCheck as jest.Mock).mockReturnValue(true);
+        (mockNSpell.isCorrectByWordsmithLang as jest.Mock).mockReturnValue(false);
+        (mockNSpell.suggestByWordsmithLang as jest.Mock).mockReturnValue([]);
         (mockDatamuse.getSpellingSuggestions as jest.Mock).mockResolvedValue([]);
 
         // Start offline
@@ -376,7 +379,7 @@ describe("SpellingService", () => {
         // Switch to online
         service.updateSettings(createSettings({ offlineSpellingOnly: false }));
         await service.getSuggestions("test2");
-        expect(mockDatamuse.getSpellingSuggestions).toHaveBeenCalledWith("test2");
+        expect(mockDatamuse.getSpellingSuggestions).toHaveBeenCalledWith("test2", "en");
       });
     });
   });
