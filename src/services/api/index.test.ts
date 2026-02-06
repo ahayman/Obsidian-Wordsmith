@@ -4,6 +4,9 @@ import { WordsAPIService } from "./WordsAPIService";
 import { APINinjasService } from "./APINinjasService";
 import { AltervistaService } from "./AltervistaService";
 import { FreeDictionaryService } from "./FreeDictionaryService";
+import { LexicalaService } from "./LexicalaService";
+import { WiktionaryService } from "./WiktionaryService";
+import { YandexDictionaryService } from "./YandexDictionaryService";
 import {
   createAPIService,
   createAPIServiceForValidation,
@@ -85,6 +88,42 @@ describe("API Service Factory Functions", () => {
 
       expect(service).toBeInstanceOf(AltervistaService);
     });
+
+    it("should create LexicalaService", () => {
+      const service = createAPIService({
+        id: "lx-id",
+        type: "lexicala",
+        apiKey: "my-key",
+        enabled: true,
+      });
+
+      expect(service).toBeInstanceOf(LexicalaService);
+      expect(service.id).toBe("lx-id");
+    });
+
+    it("should create WiktionaryService", () => {
+      const service = createAPIService({
+        id: "wk-id",
+        type: "wiktionary",
+        apiKey: "",
+        enabled: true,
+      });
+
+      expect(service).toBeInstanceOf(WiktionaryService);
+      expect(service.id).toBe("wk-id");
+    });
+
+    it("should create YandexDictionaryService", () => {
+      const service = createAPIService({
+        id: "yx-id",
+        type: "yandex-dictionary",
+        apiKey: "my-key",
+        enabled: true,
+      });
+
+      expect(service).toBeInstanceOf(YandexDictionaryService);
+      expect(service.id).toBe("yx-id");
+    });
   });
 
   describe("createAPIServiceForValidation", () => {
@@ -103,6 +142,9 @@ describe("API Service Factory Functions", () => {
         "words-api",
         "api-ninjas",
         "altervista",
+        "lexicala",
+        "wiktionary",
+        "yandex-dictionary",
       ];
 
       for (const type of types) {
@@ -121,6 +163,9 @@ describe("API Service Factory Functions", () => {
       expect(getServiceName("words-api")).toBe("WordsAPI");
       expect(getServiceName("api-ninjas")).toBe("API Ninjas");
       expect(getServiceName("altervista")).toBe("Altervista");
+      expect(getServiceName("lexicala")).toBe("Lexicala");
+      expect(getServiceName("wiktionary")).toBe("Wiktionary");
+      expect(getServiceName("yandex-dictionary")).toBe("Yandex Dictionary");
     });
   });
 });

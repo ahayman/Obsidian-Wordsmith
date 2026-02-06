@@ -17,12 +17,15 @@ export type APIServiceType =
   | "words-api"
   | "api-ninjas"
   | "altervista"
-  | "free-dictionary";
+  | "free-dictionary"
+  | "lexicala"
+  | "wiktionary"
+  | "yandex-dictionary";
 
 // All possible tab identifiers (built-in + API service IDs as dynamic strings)
 export type TabId = string;
 
-// Source types for SynonymResult
+// Source types for SynonymResult (includes all APIServiceType values via union)
 export type SynonymSource = "wordnet" | "moby" | "datamuse" | "nspell" | "omw" | APIServiceType;
 
 export const TAB_LABELS: Record<BuiltinTabId, string> = {

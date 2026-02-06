@@ -1,0 +1,3 @@
+# Spanish Test Document (Español)
+
+El hermoso jardín estaba lleno de flores brillantes y árboles altos. Un pequeño pájaro cantaba una canción alegre mientras estaba sentado en una rama vieja. El tiempo era agradable y cálido, haciendo de este un día perfecto para caminar por el sendero tranquilo. Todo se sentía calmo y pacífico, como si el mundo entero hubiera decidido ir más despacio y disfrutar de la simple belleza de la naturaleza. Los niños jugaban juntos en el campo grande, riendo y corriendo con gran energía. Fue verdaderamente un momento maravilloso que hizo que todos se sintieran agradecidos y vivos.

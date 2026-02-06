@@ -6,6 +6,9 @@ import { BigHugeThesaurusService } from "./BigHugeThesaurusService";
 import { WordsAPIService } from "./WordsAPIService";
 import { APINinjasService } from "./APINinjasService";
 import { AltervistaService } from "./AltervistaService";
+import { LexicalaService } from "./LexicalaService";
+import { WiktionaryService } from "./WiktionaryService";
+import { YandexDictionaryService } from "./YandexDictionaryService";
 
 export function createAPIService(config: APIServiceConfig): SynonymService {
   switch (config.type) {
@@ -21,6 +24,12 @@ export function createAPIService(config: APIServiceConfig): SynonymService {
       return new APINinjasService(config.id, config.apiKey);
     case "altervista":
       return new AltervistaService(config.id, config.apiKey);
+    case "lexicala":
+      return new LexicalaService(config.id, config.apiKey);
+    case "wiktionary":
+      return new WiktionaryService(config.id);
+    case "yandex-dictionary":
+      return new YandexDictionaryService(config.id, config.apiKey);
   }
 }
 
@@ -43,4 +52,7 @@ export {
   WordsAPIService,
   APINinjasService,
   AltervistaService,
+  LexicalaService,
+  WiktionaryService,
+  YandexDictionaryService,
 };

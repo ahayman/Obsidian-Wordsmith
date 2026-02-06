@@ -1,0 +1,3 @@
+# German Test Document (Deutsch)
+
+Der schöne Garten war voller heller Blumen und hoher Bäume. Ein kleiner Vogel sang ein fröhliches Lied, während er auf einem alten Ast saß. Das Wetter war angenehm und warm, was es zu einem perfekten Tag machte, um auf dem ruhigen Weg spazieren zu gehen. Alles fühlte sich ruhig und friedlich an, als hätte die ganze Welt beschlossen, langsamer zu werden und die einfache Schönheit der Natur zu genießen. Die Kinder spielten zusammen auf dem großen Feld, lachten und rannten mit großer Energie. Es war wirklich ein wunderbarer Moment, der alle dankbar und lebendig fühlen ließ.

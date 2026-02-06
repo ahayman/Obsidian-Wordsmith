@@ -25,6 +25,12 @@ export const SUPPORTED_LANGUAGES: LanguageInfo[] = [
   { code: "pl", name: "Polish", nativeName: "Polski" },
   { code: "ro", name: "Romanian", nativeName: "Română" },
   { code: "sk", name: "Slovak", nativeName: "Slovenčina" },
+  { code: "bg", name: "Bulgarian", nativeName: "Български" },
+  { code: "nl", name: "Dutch", nativeName: "Nederlands" },
+  { code: "sv", name: "Swedish", nativeName: "Svenska" },
+  { code: "fi", name: "Finnish", nativeName: "Suomi" },
+  { code: "uk", name: "Ukrainian", nativeName: "Українська" },
+  { code: "zh", name: "Chinese", nativeName: "中文" },
 ];
 
 // Base language support per built-in service (without OMW)
@@ -64,6 +70,12 @@ export const API_SERVICE_LANGUAGES: Record<APIServiceType, LanguageCode[]> = {
   "big-huge-thesaurus": ["en"],
   "words-api": ["en"],
   "api-ninjas": ["en"],
+  // Lexicala supports 50+ languages, intersected with our LanguageCode type
+  lexicala: ["en", "es", "fr", "de", "it", "pt-BR", "ja", "ko", "ar", "ru", "hi", "tr", "cs", "da", "el", "hu", "no", "pl", "ro", "sk", "bg", "nl", "sv", "fi", "zh"],
+  // Wiktionary covers all languages via subdomains
+  wiktionary: ["en", "es", "fr", "de", "it", "pt-BR", "ja", "ko", "ar", "ru", "hi", "tr", "cs", "da", "el", "hu", "no", "pl", "ro", "sk", "bg", "nl", "sv", "fi", "uk", "zh"],
+  // Yandex Dictionary supports 29 languages in monolingual mode, intersected with our codes
+  "yandex-dictionary": ["en", "es", "fr", "de", "it", "ru", "tr", "cs", "da", "el", "hu", "no", "pl", "sk", "bg", "nl", "sv", "fi", "uk", "zh"],
 };
 
 // Combined service language support (for convenience)

@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-    "build:copy": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && cp main.js manifest.json styles.css ~/Projects/Plugin\\ Test/.obsidian/plugins/wordsmith",
+    "build:copy": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && cp main.js manifest.json styles.css ./Test-Vault/.obsidian/plugins/wordsmith",
     "build:release": "sh ./release.sh",
     "lint": "eslint .",
     "test": "jest",

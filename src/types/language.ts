@@ -20,7 +20,13 @@ export type LanguageCode =
   | "no"     // Norwegian
   | "pl"     // Polish
   | "ro"     // Romanian
-  | "sk";    // Slovak
+  | "sk"     // Slovak
+  | "bg"     // Bulgarian
+  | "nl"     // Dutch
+  | "sv"     // Swedish
+  | "fi"     // Finnish
+  | "uk"     // Ukrainian
+  | "zh";    // Chinese
 
 // Setting value: specific language, default (Obsidian locale), or auto-detect
 export type LanguageSetting = LanguageCode | "default" | "auto";

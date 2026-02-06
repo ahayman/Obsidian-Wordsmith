@@ -1,0 +1,3 @@
+# Portuguese (Brazil) Test Document (Português do Brasil)
+
+O belo jardim estava cheio de flores brilhantes e árvores altas. Um pequeno pássaro cantava uma canção alegre enquanto estava sentado em um galho velho. O tempo estava agradável e quente, tornando este um dia perfeito para caminhar pelo caminho tranquilo. Tudo parecia calmo e pacífico, como se o mundo inteiro tivesse decidido desacelerar e aproveitar a simples beleza da natureza. As crianças brincavam juntas no grande campo, rindo e correndo com muita energia. Foi realmente um momento maravilhoso que fez todos se sentirem gratos e vivos.

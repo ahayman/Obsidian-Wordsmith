@@ -90,6 +90,24 @@ const SERVICE_ICONS: Record<string, ServiceIconConfig> = {
     color: "#22C55E", // Green
     textColor: "#FFFFFF",
   },
+  lexicala: {
+    type: "circle",
+    abbrev: "Lx",
+    color: "#7C3AED", // Violet
+    textColor: "#FFFFFF",
+  },
+  wiktionary: {
+    type: "circle",
+    abbrev: "Wk",
+    color: "#059669", // Emerald
+    textColor: "#FFFFFF",
+  },
+  "yandex-dictionary": {
+    type: "circle",
+    abbrev: "Ya",
+    color: "#EF4444", // Red (Yandex brand)
+    textColor: "#FFFFFF",
+  },
 };
 
 /**

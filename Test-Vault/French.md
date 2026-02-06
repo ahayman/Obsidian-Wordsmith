@@ -1,0 +1,3 @@
+# French Test Document (Français)
+
+Le beau jardin était plein de fleurs brillantes et de grands arbres. Un petit oiseau chantait une chanson joyeuse en restant sur une vieille branche. Le temps était agréable et chaud, faisant de cette journée un jour parfait pour marcher le long du chemin tranquille. Tout semblait calme et paisible, comme si le monde entier avait décidé de ralentir et de profiter de la simple beauté de la nature. Les enfants jouaient ensemble dans le grand champ, riant et courant avec beaucoup d'énergie. C'était vraiment un moment merveilleux qui rendait tout le monde reconnaissant et vivant.

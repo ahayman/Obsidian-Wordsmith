@@ -89,6 +89,38 @@ export const API_SERVICE_INFO: Record<APIServiceType, APIServiceInfo> = {
     supportedTypes: ["synonym", "antonym"],
     supportedLanguages: API_SERVICE_LANGUAGES["free-dictionary"],
   },
+  lexicala: {
+    type: "lexicala",
+    name: "Lexicala",
+    description: "Multilingual dictionary API via RapidAPI (50+ languages)",
+    requiresKey: true,
+    registrationUrl: "https://rapidapi.com/kdictionaries/api/lexicala1",
+    registrationInstructions:
+      "Sign up for RapidAPI and subscribe to Lexicala API. Free tier: 50 calls/day. Your key is the X-RapidAPI-Key shown on the API page.",
+    supportedTypes: ["synonym", "antonym"],
+    supportedLanguages: API_SERVICE_LANGUAGES["lexicala"],
+  },
+  wiktionary: {
+    type: "wiktionary",
+    name: "Wiktionary",
+    description: "Free community dictionary (280+ languages, no key required)",
+    requiresKey: false,
+    registrationUrl: "",
+    registrationInstructions: "No API key required. This service is free and open.",
+    supportedTypes: ["synonym", "antonym"],
+    supportedLanguages: API_SERVICE_LANGUAGES["wiktionary"],
+  },
+  "yandex-dictionary": {
+    type: "yandex-dictionary",
+    name: "Yandex Dictionary",
+    description: "Free dictionary API with synonym support (29 languages)",
+    requiresKey: true,
+    registrationUrl: "https://yandex.com/dev/dictionary/keys/get/",
+    registrationInstructions:
+      "Register on the Yandex developer portal to receive a free API key.",
+    supportedTypes: ["synonym"],
+    supportedLanguages: API_SERVICE_LANGUAGES["yandex-dictionary"],
+  },
 };
 
 // Supported types for built-in services
