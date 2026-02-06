@@ -49,29 +49,17 @@ export class SynonymSettingsTab extends PluginSettingTab {
     this.plugin = plugin;
   }
 
-  display(): void {
+display(): void {
     const { containerEl } = this;
     containerEl.empty();
 
-    new Setting(containerEl)
-      .setName("Maximum results")
-      .setDesc("Maximum number of synonyms and related words to show per tab")
-      .addSlider((slider) =>
-        slider
-          .setLimits(10, 100, 10)
-          .setValue(this.plugin.settings.maxResults)
-          .setDynamicTooltip()
-          .onChange(async (value) => {
-            this.plugin.settings.maxResults = value;
-            await this.plugin.saveSettings();
-          })
-      );
-
-    // Language settings section
+    // Language section
+    new Setting(containerEl).setName("Language").setHeading();
     this.addLanguageSettings(containerEl);
 
+    // Data Sources section
     new Setting(containerEl).setName("Data sources").setHeading();
-
+    
     containerEl.createEl("p", {
       cls: "setting-item-description wordsmith-sources-desc",
       text: "Enable/disable sources and reorder them. The order here determines the tab order in the synonym modal.",
@@ -97,18 +85,66 @@ export class SynonymSettingsTab extends PluginSettingTab {
       }).open();
     });
 
-    new Setting(containerEl).setName("Cache").setHeading();
-
-    this.addCacheSettings(containerEl);
-
+    // Local Data section
     new Setting(containerEl).setName("Local data").setHeading();
-
     this.addLocalDataSettings(containerEl);
 
-    new Setting(containerEl).setName("Spelling suggestions").setHeading();
-
+    // Downloaded Dictionaries section
+    new Setting(containerEl).setName("Downloaded dictionaries").setHeading();
     this.addNSpellSetting(containerEl);
     this.addOfflineSpellingSetting(containerEl);
+
+    // Options section
+    new Setting(containerEl).setName("Options").setHeading();
+    
+    // Cache settings in Options section
+    const cacheService = this.plugin.dataService?.cacheService;
+    const currentSize = cacheService?.size ?? 0;
+
+    new Setting(containerEl)
+      .setName("Cache size")
+      .setDesc("Maximum number of words to cache (0 to disable caching)")
+      .addSlider((slider) =>
+        slider
+          .setLimits(0, 1000, 50)
+          .setValue(this.plugin.settings.maxCacheSize)
+          .setDynamicTooltip()
+          .onChange(async (value) => {
+            this.plugin.settings.maxCacheSize = value;
+            await this.plugin.saveSettings();
+            this.display();
+          })
+      );
+
+    const clearSetting = new Setting(containerEl)
+      .setName("Clear cache")
+      .setDesc(`Currently caching ${currentSize} word${currentSize === 1 ? "" : "s"}`);
+
+    clearSetting.addButton((button) => {
+      button
+        .setButtonText("Clear")
+        .setDisabled(currentSize === 0)
+        .onClick(async () => {
+          cacheService?.clear();
+          await this.plugin.saveSettings();
+          this.display();
+        });
+    });
+
+    // Frontmatter property setting in Options section
+    new Setting(containerEl)
+      .setName("Frontmatter property")
+      .setDesc("The frontmatter property name used to specify language per-document (e.g., 'lang: es')")
+      .addText((text) =>
+        text
+          // eslint-disable-next-line obsidianmd/ui/sentence-case
+          .setPlaceholder("lang")
+          .setValue(this.plugin.settings.frontmatterProperty)
+          .onChange(async (value) => {
+            this.plugin.settings.frontmatterProperty = value || "lang";
+            await this.plugin.saveSettings();
+          })
+      );
   }
 
   private addCacheSettings(containerEl: HTMLElement): void {
@@ -585,13 +621,8 @@ export class SynonymSettingsTab extends PluginSettingTab {
       text: "Download Hunspell dictionaries for offline spelling suggestions. Multiple languages can be downloaded.",
     });
 
-    // Downloaded dictionaries section
+    // Downloaded dictionaries section (just the content, no heading)
     const downloadedSection = containerEl.createDiv({ cls: "wordsmith-local-downloaded" });
-    downloadedSection.createEl("div", {
-      cls: "setting-item-name wordsmith-local-section-title",
-      text: "Downloaded dictionaries",
-    });
-
     const downloadedList = downloadedSection.createDiv({ cls: "wordsmith-local-downloaded-list" });
     this.renderDownloadedHunspellItems(downloadedList);
 
@@ -786,12 +817,10 @@ export class SynonymSettingsTab extends PluginSettingTab {
     return types.map(t => TYPE_DISPLAY_LABELS[t]).join(", ");
   }
 
-  /**
-   * Add language settings section.
-   */
+/**
+ * Add language settings section.
+ */
   private addLanguageSettings(containerEl: HTMLElement): void {
-    new Setting(containerEl).setName("Language").setHeading();
-
     // Build language options for dropdown
     const languageOptions: Record<string, string> = {
       default: "Default (Obsidian locale)",
@@ -862,25 +891,6 @@ export class SynonymSettingsTab extends PluginSettingTab {
         warningIcon.appendText(` No enabled services support ${langName}. Enable Free Dictionary or Altervista for multi-language support.`);
       }
     }
-
-    // Advanced: Frontmatter property name (collapsible)
-    const advancedDetails = containerEl.createEl("details", { cls: "wordsmith-advanced-settings" });
-    advancedDetails.createEl("summary", { text: "Advanced" });
-
-    const advancedContent = advancedDetails.createDiv();
-    new Setting(advancedContent)
-      .setName("Frontmatter property")
-      .setDesc("The frontmatter property name used to specify language per-document (e.g., 'lang: es')")
-      .addText((text) =>
-        text
-          // eslint-disable-next-line obsidianmd/ui/sentence-case
-          .setPlaceholder("lang")
-          .setValue(this.plugin.settings.frontmatterProperty)
-          .onChange(async (value) => {
-            this.plugin.settings.frontmatterProperty = value || "lang";
-            await this.plugin.saveSettings();
-          })
-      );
   }
 
   /**
